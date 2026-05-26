@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.readlater.mapper.ReadLaterMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.readlater.entity.ReadLater">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="post_id" property="postId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <select id="selectPageWithPost" resultMap="BaseResultMap">
+        SELECT rl.id, rl.user_id, rl.post_id, rl.create_time, rl.update_time, rl.deleted
+        FROM read_later rl
+        WHERE rl.user_id = #{userId} AND rl.deleted = 0
+        ORDER BY rl.create_time DESC
+    </select>
+
+    <select id="exists" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM read_later
+        WHERE user_id = #{userId} AND post_id = #{postId} AND deleted = 0
+    </select>
+
+</mapper>

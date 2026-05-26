@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.reading.mapper.ReadingHistoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.reading.entity.ReadingHistory">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="post_id" property="postId"/>
+        <result column="read_at" property="readAt"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <select id="selectPageWithPost" resultMap="BaseResultMap">
+        SELECT rh.id, rh.user_id, rh.post_id, rh.read_at, rh.create_time, rh.update_time, rh.deleted
+        FROM reading_history rh
+        WHERE rh.user_id = #{userId} AND rh.deleted = 0
+        ORDER BY rh.read_at DESC
+    </select>
+
+</mapper>

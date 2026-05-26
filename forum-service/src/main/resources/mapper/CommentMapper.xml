@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.comment.mapper.CommentMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.comment.entity.Comment">
+        <id column="id" property="id"/>
+        <result column="post_id" property="postId"/>
+        <result column="user_id" property="userId"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="reply_to_id" property="replyToId"/>
+        <result column="content" property="content"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, post_id, user_id, parent_id, reply_to_id, content,
+        like_count, status, create_time, update_time, deleted
+    </sql>
+
+    <select id="selectFirstLevelPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM comments
+        WHERE post_id = #{postId} AND parent_id IS NULL AND deleted = 0
+        ORDER BY
+        <choose>
+            <when test="orderBy == 'like_count'">like_count DESC, create_time DESC</when>
+            <otherwise>create_time ASC</otherwise>
+        </choose>
+    </select>
+
+    <select id="selectReplies" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM comments
+        WHERE parent_id = #{parentId} AND deleted = 0
+        ORDER BY create_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countReplies" resultType="int">
+        SELECT COUNT(*) FROM comments
+        WHERE parent_id = #{parentId} AND deleted = 0
+    </select>
+
+    <select id="selectRepliesByParentIds" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM comments
+        WHERE parent_id IN
+        <foreach collection="parentIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+        AND deleted = 0
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="countRepliesByParentIds" resultType="java.util.HashMap">
+        SELECT parent_id AS "parentId", COUNT(*) AS "cnt"
+        FROM comments
+        WHERE parent_id IN
+        <foreach collection="parentIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+        AND deleted = 0
+        GROUP BY parent_id
+    </select>
+
+</mapper>

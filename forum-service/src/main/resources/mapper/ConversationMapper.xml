@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.message.mapper.ConversationMapper">
+
+    <select id="selectByUserId" resultType="com.mindtalk.forum.modules.message.entity.Conversation">
+        SELECT * FROM conversations
+        WHERE (user1_id = #{userId} OR user2_id = #{userId}) AND deleted = 0
+        ORDER BY last_message_at DESC NULLS LAST, create_time DESC
+    </select>
+
+    <select id="findByUserPair" resultType="com.mindtalk.forum.modules.message.entity.Conversation">
+        SELECT * FROM conversations
+        WHERE LEAST(user1_id, user2_id) = LEAST(#{user1Id}, #{user2Id})
+          AND GREATEST(user1_id, user2_id) = GREATEST(#{user1Id}, #{user2Id})
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
+</mapper>

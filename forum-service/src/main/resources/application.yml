@@ -1,0 +1,110 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: forum-service
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:mindtalk}
+    username: ${POSTGRES_USER:mindtalk}
+    password: ${POSTGRES_PASSWORD:mindtalk123}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  elasticsearch:
+    uris: ${ES_URIS:http://localhost:9200}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+rocketmq:
+  name-server: ${ROCKETMQ_ADDR:localhost:9876}
+  producer:
+    group: forum-producer-group
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: mindtalk
+  presigned-expiry-seconds: 3600
+
+jwt:
+  secret: ${JWT_SECRET:mindtalk-forum-jwt-secret-key-2024}
+  access-token-ttl: 1800000
+  refresh-token-ttl: 604800000
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# ── RSS 配置 ──
+rss:
+  title: MindTalk 最新帖子
+  description: MindTalk 思享论坛最新帖子
+  generator: MindTalk Forum
+  site-url: https://mindtalk.example.com
+  timezone: Asia/Shanghai
+  default-limit: 20
+  truncate-length: 200
+
+# ── 定时任务 ──
+scheduling:
+  badge-eval-cron: "0 0 */6 * * *"
+  post-expiry-cron: "0 */30 * * * *"
+
+# ── 业务参数 ──
+forum:
+  view-count-flush-threshold: 100
+  view-count-expire-hours: 1
+  default-page-size: 20
+  max-page-size: 100
+
+# ── 限流默认值 ──
+rate-limit:
+  default-window: 60
+  default-max-requests: 10
+
+# ── CORS ──
+cors:
+  allowed-origins: "*"
+  max-age: 3600
+
+# ── 功能开关 ──
+feature:
+  rss:
+    enabled: true
+  registration:
+    enabled: true
+  search:
+    enabled: true
+
+logging:
+  level:
+    com.mindtalk.forum: ${LOG_LEVEL:INFO}

@@ -1,0 +1,61 @@
+@use './tokens.scss';
+@use './dark.scss';
+@use './transitions.scss';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: var(--line-height-normal);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+// Scrollbar
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-text-tertiary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
+
+// Element Plus global overrides
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--color-border) !important;
+}
+.el-button--primary {
+  --el-button-bg-color: var(--color-primary);
+  --el-button-border-color: var(--color-primary);
+  --el-button-hover-bg-color: var(--color-primary-hover);
+  --el-button-hover-border-color: var(--color-primary-hover);
+}
+.el-input__wrapper {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: none !important;
+  border: var(--border-width) solid var(--color-border);
+  transition: border-color var(--transition-fast);
+  &:hover { border-color: var(--color-text-tertiary); }
+}
+.el-input.is-focus .el-input__wrapper {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-50) !important;
+}
+.el-pagination {
+  justify-content: center;
+  padding: var(--spacing-lg) 0;
+}

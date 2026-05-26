@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: forum-service
+          uri: lb://forum-service
+          predicates:
+            - Path=/api/**
+          filters:
+            - StripPrefix=1
+        - id: forum-service-auth
+          uri: lb://forum-service
+          predicates:
+            - Path=/auth/**
+      # CORS 由 GatewayCorsConfig 统一管理
+
+jwt:
+  secret: ${JWT_SECRET:mindtalk-forum-jwt-secret-key-2024}
+  access-token-ttl: 1800000
+  refresh-token-ttl: 604800000
+
+# ── CORS ──
+cors:
+  allowed-origins: "*"
+  max-age: 3600
+
+logging:
+  level:
+    com.mindtalk.gateway: ${LOG_LEVEL:INFO}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.post.mapper.TagMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.post.entity.Tag">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="post_count" property="postCount"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, description, post_count, status, create_time, update_time, deleted
+    </sql>
+
+    <select id="selectByPostId" resultMap="BaseResultMap">
+        SELECT t.id, t.name, t.description, t.post_count, t.status,
+               t.create_time, t.update_time, t.deleted
+        FROM tags t
+        INNER JOIN post_tags pt ON t.id = pt.tag_id AND pt.deleted = 0
+        WHERE pt.post_id = #{postId} AND t.deleted = 0
+        ORDER BY t.id
+    </select>
+
+</mapper>

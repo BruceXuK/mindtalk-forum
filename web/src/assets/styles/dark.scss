@@ -1,0 +1,46 @@
+html.dark {
+  color-scheme: dark;
+
+  // ── Colors ──
+  --color-primary: #3B82F6;
+  --color-primary-hover: #60A5FA;
+  --color-primary-light: #1E3A5F;
+  --color-primary-50: #1E293B;
+  --color-bg: #0F172A;
+  --color-bg-secondary: #1E293B;
+  --color-card: #1E293B;
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-tertiary: #64748B;
+  --color-border: #334155;
+  --color-divider: #1E293B;
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+
+  // ── Shadows (darker for dark mode) ──
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  // ── Element Plus dark overrides ──
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: #1E3A5F;
+  --el-color-primary-light-5: #1A2F4A;
+  --el-color-primary-light-7: #152438;
+  --el-color-primary-light-8: #101F2E;
+  --el-color-primary-light-9: #0C1824;
+  --el-color-primary-dark-2: #60A5FA;
+  --el-bg-color: var(--color-bg);
+  --el-bg-color-overlay: var(--color-card);
+  --el-bg-color-page: var(--color-bg);
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-secondary);
+  --el-text-color-secondary: var(--color-text-tertiary);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-divider);
+  --el-fill-color: var(--color-bg-secondary);
+  --el-fill-color-blank: var(--color-card);
+  --el-fill-color-light: var(--color-bg-secondary);
+}

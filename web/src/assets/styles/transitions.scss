@@ -1,0 +1,61 @@
+// Shared transitions for Vue <Transition> components
+.fade-enter-active,
+.fade-leave-active { transition: opacity var(--transition-base); }
+.fade-enter-from,
+.fade-leave-to { opacity: 0; }
+
+.slide-up-enter-active,
+.slide-up-leave-active { transition: opacity var(--transition-base), transform var(--transition-base); }
+.slide-up-enter-from { opacity: 0; transform: translateY(8px); }
+.slide-up-leave-to { opacity: 0; transform: translateY(-8px); }
+
+.slide-left-enter-active,
+.slide-left-leave-active { transition: transform var(--transition-base); }
+.slide-left-enter-from { transform: translateX(-100%); }
+.slide-left-leave-to { transform: translateX(-100%); }
+
+// Card list staggered animation
+.stagger-item { opacity: 0; animation: scaleIn var(--transition-slow) forwards; }
+@for $i from 1 through 20 {
+  .stagger-item:nth-child(#{$i}) { animation-delay: #{$i * 0.04}s; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+// Utility classes
+.hover-lift {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg) !important;
+  }
+}
+
+.card-base {
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: var(--border-width) solid var(--color-border);
+}
+
+.text-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.text-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

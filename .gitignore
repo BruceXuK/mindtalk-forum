@@ -1,0 +1,38 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Node
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Env
+.env
+deploy/.env
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Log
+logs/
+*.log
+
+# Deploy
+deploy/node_modules/
+deploy/rocketmq/
+
+# Claude
+.claude/

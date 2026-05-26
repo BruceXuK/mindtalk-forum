@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.post.mapper.PostMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.post.entity.Post">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="content_text" property="contentText"/>
+        <result column="author_id" property="authorId"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="is_pinned" property="isPinned"/>
+        <result column="is_featured" property="isFeatured"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="collect_count" property="collectCount"/>
+        <result column="status" property="status"/>
+        <result column="pinned_at" property="pinnedAt"/>
+        <result column="pinned_until" property="pinnedUntil"/>
+        <result column="featured_at" property="featuredAt"/>
+        <result column="featured_until" property="featuredUntil"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        p.id, p.title, p.content, p.content_text, p.author_id, p.category_id,
+        p.is_pinned, p.is_featured, p.view_count, p.like_count, p.comment_count,
+        p.collect_count, p.status, p.pinned_at, p.pinned_until, p.featured_at, p.featured_until,
+        p.create_time, p.update_time, p.deleted
+    </sql>
+
+    <select id="selectPageWithAuthor" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM posts p
+        WHERE p.deleted = 0
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="tagId != null">
+            AND p.id IN (SELECT pt.post_id FROM post_tags pt WHERE pt.tag_id = #{tagId} AND pt.deleted = 0)
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (p.title ILIKE CONCAT('%', #{keyword}, '%')
+                 OR p.content_text ILIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="status != null">
+            AND p.status = #{status}
+        </if>
+        <if test="userId != null">
+            AND p.author_id = #{userId}
+        </if>
+        <if test="followingUserId != null">
+            AND EXISTS (SELECT 1 FROM follows WHERE follower_id = #{followingUserId} AND followee_id = p.author_id AND deleted = 0)
+        </if>
+        ORDER BY p.is_pinned DESC, p.pinned_at DESC,
+        <choose>
+            <when test="orderBy == 'view_count'">p.view_count DESC</when>
+            <when test="orderBy == 'like_count'">p.like_count DESC</when>
+            <when test="orderBy == 'comment_count'">p.comment_count DESC</when>
+            <otherwise>p.create_time DESC</otherwise>
+        </choose>
+    </select>
+
+    <select id="selectHotPosts" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM posts p
+        WHERE p.deleted = 0 AND p.status = 1
+        ORDER BY p.view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectRanking" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM posts p
+        WHERE p.deleted = 0 AND p.status = 1
+          AND p.create_time >= #{startTime}
+        ORDER BY p.view_count DESC, p.like_count DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

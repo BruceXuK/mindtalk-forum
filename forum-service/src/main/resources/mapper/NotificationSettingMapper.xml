@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.message.mapper.NotificationSettingMapper">
+
+    <select id="selectByUserId" resultType="com.mindtalk.forum.modules.message.entity.NotificationSetting">
+        SELECT * FROM notification_settings
+        WHERE user_id = #{userId} AND deleted = 0
+    </select>
+
+    <select id="isEnabled" resultType="boolean">
+        SELECT COALESCE(
+            (SELECT enabled FROM notification_settings
+             WHERE user_id = #{userId} AND notify_type = #{notifyType} AND deleted = 0),
+            TRUE
+        )
+    </select>
+
+</mapper>

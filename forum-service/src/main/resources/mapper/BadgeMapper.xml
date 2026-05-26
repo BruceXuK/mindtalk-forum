@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.badge.mapper.BadgeMapper">
+
+    <select id="selectByUserId" resultType="com.mindtalk.forum.modules.badge.entity.Badge">
+        SELECT b.* FROM badges b
+        INNER JOIN user_badges ub ON ub.badge_id = b.id AND ub.deleted = 0
+        WHERE ub.user_id = #{userId} AND b.deleted = 0
+        ORDER BY b.sort_order ASC
+    </select>
+
+</mapper>

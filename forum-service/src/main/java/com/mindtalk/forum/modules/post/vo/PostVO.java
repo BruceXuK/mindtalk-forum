@@ -1,0 +1,61 @@
+package com.mindtalk.forum.modules.post.vo;
+
+import com.mindtalk.forum.modules.user.vo.UserVO;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * 帖子列表 VO
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PostVO {
+
+    private Long id;
+
+    private String title;
+
+    /** 内容摘要（前 200 字符） */
+    private String summary;
+
+    /** 作者信息 */
+    private UserVO author;
+
+    /** 分类 */
+    private CategoryVO category;
+
+    /** 标签列表 */
+    private List<TagVO> tags;
+
+    private Integer viewCount;
+
+    private Integer likeCount;
+
+    private Integer commentCount;
+
+    private Integer collectCount;
+
+    private Boolean isPinned;
+
+    private Boolean isFeatured;
+
+    private LocalDateTime pinnedUntil;
+
+    private LocalDateTime featuredUntil;
+
+    /** 当前用户是否已关注作者 */
+    private Boolean authorIsFollowing;
+
+    private Integer status;
+
+    private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
+}

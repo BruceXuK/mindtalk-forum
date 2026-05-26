@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.post.mapper.PostTagMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.post.entity.PostTag">
+        <id column="id" property="id"/>
+        <result column="post_id" property="postId"/>
+        <result column="tag_id" property="tagId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <insert id="batchInsert" parameterType="list">
+        INSERT INTO post_tags (post_id, tag_id) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.postId}, #{item.tagId})
+        </foreach>
+    </insert>
+
+    <update id="deleteByPostId">
+        UPDATE post_tags SET deleted = 1 WHERE post_id = #{postId} AND deleted = 0
+    </update>
+
+    <select id="selectByPostId" resultMap="BaseResultMap">
+        SELECT id, post_id, tag_id, create_time, update_time, deleted
+        FROM post_tags
+        WHERE post_id = #{postId} AND deleted = 0
+    </select>
+
+    <select id="selectByPostIds" resultMap="BaseResultMap">
+        SELECT id, post_id, tag_id, create_time, update_time, deleted
+        FROM post_tags
+        WHERE post_id IN
+        <foreach collection="postIds" item="pid" open="(" separator="," close=")">
+            #{pid}
+        </foreach>
+        AND deleted = 0
+    </select>
+
+</mapper>

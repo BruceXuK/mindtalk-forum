@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.comment.mapper.LikeMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.comment.entity.Like">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="target_type" property="targetType"/>
+        <result column="target_id" property="targetId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <select id="exists" resultType="int">
+        SELECT COUNT(*) FROM likes
+        WHERE user_id = #{userId}
+          AND target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND deleted = 0
+    </select>
+
+    <select id="countByTarget" resultType="int">
+        SELECT COUNT(*) FROM likes
+        WHERE target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND deleted = 0
+    </select>
+
+    <select id="selectLikedIds" resultType="java.lang.Long">
+        SELECT target_id FROM likes
+        WHERE user_id = #{userId}
+          AND target_type = #{targetType}
+          AND target_id IN
+        <foreach collection="targetIds" item="tid" open="(" separator="," close=")">
+            #{tid}
+        </foreach>
+          AND deleted = 0
+    </select>
+
+</mapper>

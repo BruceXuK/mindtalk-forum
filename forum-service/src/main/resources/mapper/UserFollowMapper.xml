@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mindtalk.forum.modules.user.mapper.UserFollowMapper">
+
+    <resultMap id="BaseResultMap" type="com.mindtalk.forum.modules.user.entity.UserFollow">
+        <id column="id" property="id"/>
+        <result column="follower_id" property="followerId"/>
+        <result column="followee_id" property="followeeId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, follower_id, followee_id, create_time, update_time, deleted
+    </sql>
+
+    <select id="countFollowing" resultType="int">
+        SELECT COUNT(*) FROM follows WHERE follower_id = #{userId} AND deleted = 0
+    </select>
+
+    <select id="countFollower" resultType="int">
+        SELECT COUNT(*) FROM follows WHERE followee_id = #{userId} AND deleted = 0
+    </select>
+
+    <select id="isFollowing" resultType="int">
+        SELECT COUNT(*) FROM follows WHERE follower_id = #{followerId} AND followee_id = #{followeeId} AND deleted = 0
+    </select>
+
+    <select id="selectFolloweeIdsByFollower" resultType="long">
+        SELECT followee_id FROM follows
+        WHERE follower_id = #{followerId}
+        AND followee_id IN
+        <foreach collection="followeeIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND deleted = 0
+    </select>
+
+    <select id="selectFollowingUsers" resultType="com.mindtalk.forum.modules.user.entity.User">
+        SELECT u.id, u.username, u.nickname, u.avatar_url, u.bio,
+               u.gender, u.location, u.status, u.create_time
+        FROM users u
+        JOIN follows f ON u.id = f.followee_id
+        WHERE f.follower_id = #{userId}
+          AND f.deleted = 0
+          AND u.deleted = 0
+          AND u.status = 1
+        <if test="keyword != null and keyword != ''">
+          AND (u.nickname ILIKE CONCAT('%', #{keyword}, '%')
+               OR u.username ILIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY f.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

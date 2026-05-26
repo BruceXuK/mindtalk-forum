@@ -1,0 +1,226 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: mindtalk-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../web/dist:/usr/share/nginx/html:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: ../deploy/gateway/Dockerfile
+    container_name: mindtalk-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - NACOS_ADDR=nacos:8848
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  forum-service:
+    build:
+      context: ../forum-service
+      dockerfile: ../deploy/forum-service/Dockerfile
+    container_name: mindtalk-forum-service
+    ports:
+      - "8081:8081"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mindtalk
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ES_URIS=http://elasticsearch:9200
+      - ROCKETMQ_ADDR=rocketmq-namesrv:9876
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - NACOS_ADDR=nacos:8848
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rocketmq-namesrv:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: mindtalk-nacos
+    environment:
+      - MODE=standalone
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8848/nacos/v1/console/health/readiness" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mindtalk-postgres
+    environment:
+      - POSTGRES_DB=mindtalk
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - mindtalk_pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d mindtalk" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mindtalk-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - mindtalk_redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  elasticsearch:
+    build:
+      context: ./elasticsearch
+    container_name: mindtalk-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - mindtalk_es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1" ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.1.4
+    container_name: mindtalk-rocketmq-namesrv
+    command: sh mqnamesrv
+    ports:
+      - "9876:9876"
+    environment:
+      - "JAVA_OPT_EXT=-Xms256m -Xmx256m"
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9876' || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.1.4
+    container_name: mindtalk-rocketmq-broker
+    command: sh mqbroker -n rocketmq-namesrv:9876
+    ports:
+      - "10911:10911"
+    environment:
+      - "JAVA_OPT_EXT=-Xms512m -Xmx512m"
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/10911' || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_healthy
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: mindtalk-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - mindtalk_minio_data:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mindtalk-network
+    restart: unless-stopped
+
+volumes:
+  mindtalk_pg_data:
+  mindtalk_redis_data:
+  mindtalk_es_data:
+  mindtalk_minio_data:
+
+networks:
+  mindtalk-network:
+    driver: bridge
