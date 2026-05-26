@@ -43,7 +43,7 @@ public class SecurityConfig {
                 // 公开读取
                 .requestMatchers(HttpMethod.GET,
                         "/posts/**", "/comments/**", "/users/*/profile", "/categories/**", "/tags/**",
-                        "/search/**").permitAll()
+                        "/search/**", "/rss/**").permitAll()
                 // 浏览计数（匿名）
                 .requestMatchers(HttpMethod.POST, "/posts/*/view").permitAll()
                 // 管理接口需要 ADMIN 角色
