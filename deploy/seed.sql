@@ -179,3 +179,17 @@ INSERT INTO comments (post_id, user_id, content, parent_id, reply_to_id) VALUES
 UPDATE posts p SET comment_count = (
   SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted = 0
 ) WHERE p.deleted = 0;
+
+-- ============================================
+-- Badges (勋章定义)
+-- ============================================
+INSERT INTO badges (code, name, description, category, sort_order) VALUES
+    ('FIRST_POST', '初出茅庐', '发布第1篇帖子', 'content', 1),
+    ('TEN_POSTS', '笔耕不辍', '发布10篇帖子', 'content', 2),
+    ('FIFTY_POSTS', '著作等身', '发布50篇帖子', 'content', 3),
+    ('TEN_LIKES', '人气之星', '收到10个点赞', 'content', 4),
+    ('HUNDRED_LIKES', '万人迷', '收到100个点赞', 'content', 5),
+    ('FIVE_FOLLOWS', '社交达人', '关注5个用户', 'social', 6),
+    ('SEVEN_DAY_LOGIN', '勤勉不倦', '累计7天登录', 'general', 7),
+    ('TWENTY_COMMENTS', '评论家', '发表20条评论', 'social', 8)
+ON CONFLICT (code) DO NOTHING;

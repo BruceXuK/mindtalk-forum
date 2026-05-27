@@ -213,6 +213,8 @@ CREATE TABLE posts (
     status          SMALLINT        NOT NULL DEFAULT 1,       -- 1-正常 2-审核中
     pinned_at       TIMESTAMP,                                -- 置顶时间
     featured_at     TIMESTAMP,                                -- 加精时间
+    pinned_until    TIMESTAMP,                                -- 置顶过期时间，NULL 表示永久
+    featured_until  TIMESTAMP,                                -- 加精过期时间，NULL 表示永久
     create_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
     update_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
     deleted         SMALLINT        NOT NULL DEFAULT 0
@@ -231,6 +233,8 @@ COMMENT ON COLUMN posts.like_count     IS '点赞数（冗余）';
 COMMENT ON COLUMN posts.comment_count  IS '评论数（冗余）';
 COMMENT ON COLUMN posts.collect_count  IS '收藏数（冗余）';
 COMMENT ON COLUMN posts.status         IS '状态：1-正常 2-审核中';
+COMMENT ON COLUMN posts.pinned_until   IS '置顶过期时间，NULL 表示永久置顶';
+COMMENT ON COLUMN posts.featured_until IS '加精过期时间，NULL 表示永久加精';
 COMMENT ON COLUMN posts.deleted        IS '逻辑删除：0-正常 1-已删除';
 
 -- 查询索引
@@ -376,7 +380,7 @@ CREATE INDEX idx_follows_followee ON follows (followee_id) WHERE deleted = 0;
 
 -- ============================================================
 -- 14. 会话表
---     通过 user1_id < user2_id 的约束保证唯一性
+--     通过 CHECK 约束保证 user1_id < user2_id
 -- ============================================================
 CREATE TABLE conversations (
     id              BIGSERIAL       PRIMARY KEY,
@@ -386,7 +390,8 @@ CREATE TABLE conversations (
     last_message_at TIMESTAMP,                                -- 最后消息时间
     create_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
     update_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
-    deleted         SMALLINT        NOT NULL DEFAULT 0
+    deleted         SMALLINT        NOT NULL DEFAULT 0,
+    CONSTRAINT chk_conv_users CHECK (user1_id < user2_id)
 );
 
 COMMENT ON TABLE  conversations                 IS '会话表';
@@ -396,18 +401,12 @@ COMMENT ON COLUMN conversations.last_message    IS '最后一条消息摘要';
 COMMENT ON COLUMN conversations.last_message_at IS '最后消息时间';
 COMMENT ON COLUMN conversations.deleted         IS '逻辑删除：0-正常 1-已删除';
 
--- 保证同一对用户只有一个会话（user1_id 始终 < user2_id）
-CREATE UNIQUE INDEX uk_conversations_users ON conversations (
-    LEAST(user1_id, user2_id),
-    GREATEST(user1_id, user2_id)
-) WHERE deleted = 0;
+-- 保证同一对用户只有一个会话
+CREATE UNIQUE INDEX uk_conversations_users ON conversations (user1_id, user2_id) WHERE deleted = 0;
 
 CREATE INDEX idx_conv_user1 ON conversations (user1_id) WHERE deleted = 0;
 CREATE INDEX idx_conv_user2 ON conversations (user2_id) WHERE deleted = 0;
 CREATE INDEX idx_conv_last_msg ON conversations (last_message_at DESC) WHERE deleted = 0;
-
--- 查询某用户所有会话的加速索引
-CREATE INDEX idx_conv_user_combined ON conversations (user1_id, user2_id, last_message_at DESC) WHERE deleted = 0;
 
 -- ============================================================
 -- 15. 私信表
@@ -468,6 +467,7 @@ CREATE INDEX idx_notify_unread      ON notifications (user_id, is_read) WHERE de
 CREATE INDEX idx_notify_type        ON notifications (notify_type) WHERE deleted = 0;
 CREATE INDEX idx_notify_time        ON notifications (create_time DESC) WHERE deleted = 0;
 CREATE INDEX idx_notify_target      ON notifications (target_type, target_id) WHERE deleted = 0;
+CREATE INDEX idx_notify_from_user   ON notifications (from_user_id) WHERE deleted = 0;
 
 -- ============================================================
 -- 17. 附件表
@@ -573,9 +573,225 @@ CREATE INDEX idx_reports_reporter ON reports (reporter_id) WHERE deleted = 0;
 CREATE INDEX idx_reports_target   ON reports (target_type, target_id) WHERE deleted = 0;
 CREATE INDEX idx_reports_status   ON reports (status) WHERE deleted = 0;
 CREATE INDEX idx_reports_time     ON reports (create_time DESC) WHERE deleted = 0;
+CREATE INDEX idx_reports_handler  ON reports (handler_id) WHERE deleted = 0;
 
 -- ============================================================
--- 20. 初始化基础数据
+-- 20. 帖子系列/合集表
+-- ============================================================
+CREATE TABLE series (
+    id          BIGSERIAL PRIMARY KEY,
+    author_id   BIGINT NOT NULL,
+    title       VARCHAR(200) NOT NULL,
+    description TEXT,
+    cover_url   VARCHAR(500),
+    post_count  INT DEFAULT 0,
+    sort_order  INT DEFAULT 0,
+    status      SMALLINT DEFAULT 1,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE series IS '帖子系列/合集表';
+COMMENT ON COLUMN series.author_id IS '系列创建者 ID';
+COMMENT ON COLUMN series.title IS '系列标题';
+COMMENT ON COLUMN series.description IS '系列简介';
+COMMENT ON COLUMN series.cover_url IS '系列封面图 URL';
+COMMENT ON COLUMN series.post_count IS '系列内帖子数（冗余）';
+COMMENT ON COLUMN series.status IS '状态：1-公开 0-私密';
+COMMENT ON COLUMN series.deleted IS '逻辑删除：0-正常 1-已删除';
+
+CREATE INDEX idx_series_author ON series(author_id) WHERE deleted = 0;
+CREATE INDEX idx_series_time ON series(create_time DESC) WHERE deleted = 0;
+
+-- ============================================================
+-- 21. 系列-帖子关联表
+-- ============================================================
+CREATE TABLE series_posts (
+    id          BIGSERIAL PRIMARY KEY,
+    series_id   BIGINT NOT NULL,
+    post_id     BIGINT NOT NULL,
+    sort_order  INT DEFAULT 0,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE series_posts IS '系列-帖子关联表';
+COMMENT ON COLUMN series_posts.series_id IS '系列 ID';
+COMMENT ON COLUMN series_posts.post_id IS '帖子 ID';
+COMMENT ON COLUMN series_posts.sort_order IS '排序号';
+COMMENT ON COLUMN series_posts.deleted IS '逻辑删除：0-正常 1-已删除';
+
+CREATE UNIQUE INDEX uk_series_post ON series_posts(series_id, post_id) WHERE deleted = 0;
+CREATE INDEX idx_sp_series ON series_posts(series_id, sort_order) WHERE deleted = 0;
+CREATE INDEX idx_sp_post ON series_posts(post_id) WHERE deleted = 0;
+
+-- ============================================================
+-- 22. 阅读历史表
+-- ============================================================
+CREATE TABLE reading_history (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    post_id     BIGINT NOT NULL,
+    read_at     TIMESTAMP DEFAULT NOW(),
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE reading_history IS '阅读历史表';
+COMMENT ON COLUMN reading_history.user_id IS '用户 ID';
+COMMENT ON COLUMN reading_history.post_id IS '帖子 ID';
+COMMENT ON COLUMN reading_history.read_at IS '阅读时间';
+
+CREATE UNIQUE INDEX uk_rh_user_post ON reading_history(user_id, post_id) WHERE deleted = 0;
+CREATE INDEX idx_rh_user_time ON reading_history(user_id, read_at DESC) WHERE deleted = 0;
+
+-- ============================================================
+-- 23. 稍后阅读（阅读列表）表
+-- ============================================================
+CREATE TABLE read_later (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    post_id     BIGINT NOT NULL,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE read_later IS '稍后阅读列表';
+COMMENT ON COLUMN read_later.user_id IS '用户 ID';
+COMMENT ON COLUMN read_later.post_id IS '帖子 ID';
+
+CREATE UNIQUE INDEX uk_rl_user_post ON read_later(user_id, post_id) WHERE deleted = 0;
+CREATE INDEX idx_rl_user_time ON read_later(user_id, create_time DESC) WHERE deleted = 0;
+
+-- ============================================================
+-- 24. 勋章/成就定义表
+-- ============================================================
+CREATE TABLE badges (
+    id          BIGSERIAL PRIMARY KEY,
+    code        VARCHAR(50) NOT NULL UNIQUE,
+    name        VARCHAR(50) NOT NULL,
+    description VARCHAR(200),
+    icon_url    VARCHAR(500),
+    category    VARCHAR(30) DEFAULT 'general',
+    sort_order  INT DEFAULT 0,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE badges IS '勋章/成就定义表';
+COMMENT ON COLUMN badges.code IS '勋章编码';
+COMMENT ON COLUMN badges.name IS '勋章名称';
+COMMENT ON COLUMN badges.description IS '勋章描述';
+COMMENT ON COLUMN badges.category IS '分类: general / content / social';
+
+CREATE UNIQUE INDEX uk_badges_code ON badges(code) WHERE deleted = 0;
+CREATE INDEX idx_badges_category ON badges(category) WHERE deleted = 0;
+
+-- ============================================================
+-- 25. 用户勋章关联表
+-- ============================================================
+CREATE TABLE user_badges (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    badge_id    BIGINT NOT NULL,
+    unlocked_at TIMESTAMP DEFAULT NOW(),
+    notified    BOOLEAN DEFAULT FALSE,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE user_badges IS '用户勋章关联表';
+COMMENT ON COLUMN user_badges.user_id IS '用户 ID';
+COMMENT ON COLUMN user_badges.badge_id IS '勋章 ID';
+COMMENT ON COLUMN user_badges.unlocked_at IS '解锁时间';
+COMMENT ON COLUMN user_badges.notified IS '是否已通知用户';
+
+CREATE UNIQUE INDEX uk_ub_user_badge ON user_badges(user_id, badge_id) WHERE deleted = 0;
+CREATE INDEX idx_ub_user ON user_badges(user_id) WHERE deleted = 0;
+
+-- ============================================================
+-- 26. 标签订阅表
+-- ============================================================
+CREATE TABLE tag_subscriptions (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    tag_id      BIGINT NOT NULL,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE tag_subscriptions IS '标签订阅表';
+
+CREATE UNIQUE INDEX uk_ts_user_tag ON tag_subscriptions(user_id, tag_id) WHERE deleted = 0;
+CREATE INDEX idx_ts_user ON tag_subscriptions(user_id) WHERE deleted = 0;
+CREATE INDEX idx_ts_tag ON tag_subscriptions(tag_id) WHERE deleted = 0;
+
+-- ============================================================
+-- 27. 分类订阅表
+-- ============================================================
+CREATE TABLE category_subscriptions (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    category_id BIGINT NOT NULL,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE category_subscriptions IS '分类订阅表';
+
+CREATE UNIQUE INDEX uk_cs_user_cat ON category_subscriptions(user_id, category_id) WHERE deleted = 0;
+CREATE INDEX idx_cs_user ON category_subscriptions(user_id) WHERE deleted = 0;
+CREATE INDEX idx_cs_cat ON category_subscriptions(category_id) WHERE deleted = 0;
+
+-- ============================================================
+-- 28. 通知设置表
+-- ============================================================
+CREATE TABLE notification_settings (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    notify_type VARCHAR(30) NOT NULL,
+    enabled     BOOLEAN DEFAULT TRUE,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE notification_settings IS '用户通知设置表';
+COMMENT ON COLUMN notification_settings.notify_type IS '通知类型: LIKE/COMMENT/FOLLOW/MENTION/SYSTEM';
+COMMENT ON COLUMN notification_settings.enabled IS '是否启用该类型通知';
+
+CREATE UNIQUE INDEX uk_ns_user_type ON notification_settings(user_id, notify_type) WHERE deleted = 0;
+
+-- ============================================================
+-- 29. 敏感词库表
+-- ============================================================
+CREATE TABLE sensitive_words (
+    id          BIGSERIAL PRIMARY KEY,
+    word        VARCHAR(100) NOT NULL UNIQUE,
+    replacement VARCHAR(50) DEFAULT '***',
+    category    VARCHAR(30) DEFAULT 'general',
+    enabled     BOOLEAN DEFAULT TRUE,
+    create_time TIMESTAMP DEFAULT NOW(),
+    update_time TIMESTAMP DEFAULT NOW(),
+    deleted     SMALLINT DEFAULT 0
+);
+
+COMMENT ON TABLE sensitive_words IS '敏感词库';
+COMMENT ON COLUMN sensitive_words.word IS '敏感词';
+COMMENT ON COLUMN sensitive_words.replacement IS '替换文本';
+
+CREATE UNIQUE INDEX uk_sw_word ON sensitive_words(word) WHERE deleted = 0;
+
+-- ============================================================
+-- 初始化基础数据（角色 & 权限）
 -- ============================================================
 
 -- 角色
@@ -627,11 +843,8 @@ INSERT INTO permissions (id, parent_id, perm_name, perm_code, perm_type, path, s
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT 1, id FROM permissions WHERE deleted = 0;
 
--- 普通用户默认角色（注册时自动关联 user_roles）
--- 此处只记录角色定义，user_roles 关联在用户注册时动态创建
-
 -- ============================================================
--- 20. 自动更新 update_time 触发器函数
+-- 自动更新 update_time 触发器函数
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -660,7 +873,14 @@ BEGIN
             'notifications',
             'attachments',
             'admin_logs',
-            'reports'
+            'reports',
+            'series', 'series_posts',
+            'reading_history',
+            'read_later',
+            'badges', 'user_badges',
+            'tag_subscriptions', 'category_subscriptions',
+            'notification_settings',
+            'sensitive_words'
         ])
     LOOP
         EXECUTE format('
