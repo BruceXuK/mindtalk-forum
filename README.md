@@ -44,11 +44,19 @@ mindtalk-forum/
 ```bash
 cd deploy
 cp .env.example .env
-# 编辑 .env 填入密钥
+# 编辑 .env 填入密钥（可选，默认值可直接使用）
 docker compose up -d
 ```
 
 访问 http://localhost
+
+**默认管理员账号：**
+
+| 用户名 | 密码 | 角色 |
+|--------|------|------|
+| `admin` | `admin123` | 超级管理员（全部权限） |
+
+> 首次部署时 init.sql 自动建表并初始化角色、权限、勋章和超管账号。重新初始化见下方[数据库管理](#数据库管理)。
 
 ### 本地开发
 
@@ -89,6 +97,40 @@ window.__APP_CONFIG__ = {
 - 暗色模式 / 响应式布局 / 骨架屏
 - PWA 离线支持
 - 限流 / 操作日志 / JWT 鉴权
+
+## 数据库管理
+
+### 初始化
+
+`deploy/postgres/init.sql` 在 PostgreSQL 容器首次启动时自动执行，包含：
+
+| 内容 | 说明 |
+|------|------|
+| 29 张业务表 | 用户、帖子、评论、点赞、收藏、关注、私信、通知等 |
+| 角色（3 条） | ADMIN / MODERATOR / USER |
+| 权限（27 条） | 管理后台菜单 + 操作按钮权限 |
+| 勋章（8 条） | 内容创作、社交互动类成就定义 |
+| 超管用户 | admin / admin123 |
+
+所有表均包含逻辑删除（`deleted`）、创建时间（`create_time`）和自动更新时间（`update_time`）字段。
+
+### 重置数据
+
+保留配置数据（角色、权限、勋章、超管账号），清空所有业务数据：
+
+```bash
+cd deploy
+docker exec -i mindtalk-postgres psql -U mindtalk -d mindtalk < postgres/reset.sql
+```
+
+### 导入示例数据
+
+导入 5 个示例用户、10 篇帖子和评论：
+
+```bash
+cd deploy
+docker exec -i mindtalk-postgres psql -U mindtalk -d mindtalk < seed.sql
+```
 
 ## 环境变量
 

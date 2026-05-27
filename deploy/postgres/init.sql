@@ -844,6 +844,35 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT 1, id FROM permissions WHERE deleted = 0;
 
 -- ============================================================
+-- 初始化勋章定义
+-- ============================================================
+INSERT INTO badges (code, name, description, category, sort_order) VALUES
+    ('FIRST_POST',      '初出茅庐', '发布第1篇帖子',        'content', 1),
+    ('TEN_POSTS',       '笔耕不辍', '发布10篇帖子',         'content', 2),
+    ('FIFTY_POSTS',     '著作等身', '发布50篇帖子',         'content', 3),
+    ('TEN_LIKES',       '人气之星', '收到10个点赞',         'content', 4),
+    ('HUNDRED_LIKES',   '万人迷',   '收到100个点赞',        'content', 5),
+    ('FIVE_FOLLOWS',    '社交达人', '关注5个用户',          'social',  6),
+    ('SEVEN_DAY_LOGIN', '勤勉不倦', '累计7天登录',          'general', 7),
+    ('TWENTY_COMMENTS', '评论家',   '发表20条评论',         'social',  8);
+
+-- ============================================================
+-- 初始化默认超级管理员
+-- 用户名: admin  密码: admin123
+-- ============================================================
+INSERT INTO users (id, username, email, password_hash, nickname, status)
+VALUES (1, 'admin', 'admin@mindtalk.com',
+        '$2b$10$SjowY9tQMEAdsBtJ3pTH4u0TUwebJYpoddFL.7kIrQl93IVxS9dQe',
+        '超级管理员', 1);
+
+INSERT INTO user_roles (user_id, role_id) VALUES (1, 1);
+
+-- 修正序列，确保应用通过 IdType.AUTO 插入时不会冲突
+SELECT setval('users_id_seq', 1, true);
+SELECT setval('user_roles_id_seq', 1, true);
+SELECT setval('permissions_id_seq', (SELECT MAX(id) FROM permissions), true);
+
+-- ============================================================
 -- 自动更新 update_time 触发器函数
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
