@@ -2,12 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { UserVO } from '@/types'
 import { userApi } from '@/api/modules/user'
+import { messageApi } from '@/api/modules/message'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(sessionStorage.getItem('access_token') || '')
   const refreshToken = ref<string>(sessionStorage.getItem('refresh_token') || '')
   const userInfo = ref<UserVO | null>(null)
   const isLoggedIn = ref(!!token.value)
+  const unreadCount = ref(0)
 
   // 初始化时从 sessionStorage 恢复用户信息
   const savedUserInfo = sessionStorage.getItem('user_info')
@@ -50,6 +52,13 @@ export const useUserStore = defineStore('user', () => {
     return roles.includes(role)
   }
 
+  async function fetchUnreadCount() {
+    try {
+      const res = await messageApi.getUnreadCount()
+      unreadCount.value = res.data
+    } catch { /* ignore */ }
+  }
+
   function parseRoles(): string[] {
     // 优先从 sessionStorage 读取
     const cached = JSON.parse(sessionStorage.getItem('user_roles') || '[]')
@@ -76,5 +85,5 @@ export const useUserStore = defineStore('user', () => {
     sessionStorage.removeItem('user_roles')
   }
 
-  return { token, refreshToken, userInfo, isLoggedIn, setToken, setUserInfo, fetchUserInfo, hasRole, logout }
+  return { token, refreshToken, userInfo, isLoggedIn, unreadCount, setToken, setUserInfo, fetchUserInfo, fetchUnreadCount, hasRole, logout }
 })

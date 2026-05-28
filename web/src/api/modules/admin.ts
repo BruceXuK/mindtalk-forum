@@ -1,5 +1,5 @@
 import request from '../request'
-import type { Result, PageResult, AdminUserVO, AdminLogVO, PostVO, CommentVO, ReportVO, RoleVO, PermissionVO, PermissionTreeVO, StatsOverviewVO, StatsTrendVO } from '@/types'
+import type { Result, PageResult, AdminUserVO, AdminLogVO, PostVO, CommentVO, ReportVO, RoleVO, PermissionVO, PermissionTreeVO, StatsOverviewVO, StatsTrendVO, CategoryVO, TagVO, AnnouncementVO } from '@/types'
 
 export const adminApi = {
   // 用户管理
@@ -118,5 +118,62 @@ export const adminApi = {
   },
   batchUnbanUsers(ids: number[]) {
     return request.post<any, Result<void>>('/admin/users/batch-unban', { ids })
+  },
+
+  // 分类管理
+  getCategoryList() {
+    return request.get<any, Result<CategoryVO[]>>('/admin/categories')
+  },
+  createCategory(data: { name: string; description?: string; icon?: string; sortOrder?: number }) {
+    return request.post<any, Result<CategoryVO>>('/admin/categories', data)
+  },
+  updateCategory(id: number, data: { name?: string; description?: string; icon?: string; sortOrder?: number }) {
+    return request.put<any, Result<CategoryVO>>(`/admin/categories/${id}`, data)
+  },
+  deleteCategory(id: number) {
+    return request.delete<any, Result<void>>(`/admin/categories/${id}`)
+  },
+  toggleCategoryStatus(id: number) {
+    return request.put<any, Result<void>>(`/admin/categories/${id}/status`)
+  },
+  batchSortCategories(items: { id: number; sortOrder: number }[]) {
+    return request.put<any, Result<void>>('/admin/categories/batch-sort', items)
+  },
+
+  // 标签管理
+  getTagList() {
+    return request.get<any, Result<TagVO[]>>('/admin/tags')
+  },
+  createTag(data: { name: string; description?: string }) {
+    return request.post<any, Result<TagVO>>('/admin/tags', data)
+  },
+  updateTag(id: number, data: { name?: string; description?: string }) {
+    return request.put<any, Result<TagVO>>(`/admin/tags/${id}`, data)
+  },
+  deleteTag(id: number) {
+    return request.delete<any, Result<void>>(`/admin/tags/${id}`)
+  },
+  toggleTagStatus(id: number) {
+    return request.put<any, Result<void>>(`/admin/tags/${id}/status`)
+  },
+
+  // 公告管理
+  getAnnouncementList() {
+    return request.get<any, Result<AnnouncementVO[]>>('/admin/announcements')
+  },
+  createAnnouncement(data: { title: string; content?: string; summary?: string; level?: string; isPinned?: boolean; expireTime?: string; sortOrder?: number }) {
+    return request.post<any, Result<AnnouncementVO>>('/admin/announcements', data)
+  },
+  updateAnnouncement(id: number, data: { title?: string; content?: string; summary?: string; level?: string; isPinned?: boolean; expireTime?: string; sortOrder?: number }) {
+    return request.put<any, Result<AnnouncementVO>>(`/admin/announcements/${id}`, data)
+  },
+  deleteAnnouncement(id: number) {
+    return request.delete<any, Result<void>>(`/admin/announcements/${id}`)
+  },
+  toggleAnnouncementPublish(id: number) {
+    return request.put<any, Result<void>>(`/admin/announcements/${id}/publish`)
+  },
+  toggleAnnouncementPin(id: number) {
+    return request.put<any, Result<void>>(`/admin/announcements/${id}/pin`)
   }
 }

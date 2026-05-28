@@ -137,10 +137,28 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '统计分析', requiresAuth: true, requiresAdmin: true }
       },
       {
+        path: 'categories',
+        name: 'AdminCategories',
+        component: () => import('@/views/admin/categories/AdminCategoriesView.vue'),
+        meta: { title: '分类管理', requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'tags',
+        name: 'AdminTags',
+        component: () => import('@/views/admin/tags/AdminTagsView.vue'),
+        meta: { title: '标签管理', requiresAuth: true, requiresAdmin: true }
+      },
+      {
         path: 'sensitive-words',
         name: 'AdminSensitiveWords',
         component: () => import('@/views/admin/words/AdminSensitiveWordsView.vue'),
         meta: { title: '敏感词管理', requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'announcements',
+        name: 'AdminAnnouncements',
+        component: () => import('@/views/admin/announcements/AdminAnnouncementsView.vue'),
+        meta: { title: '公告管理', requiresAuth: true, requiresAdmin: true }
       },
       {
         path: 'logs',

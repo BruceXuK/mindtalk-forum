@@ -1,5 +1,6 @@
 package com.mindtalk.forum.common.utils;
 
+import com.mindtalk.forum.config.MinioConfig;
 import io.minio.*;
 import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +21,14 @@ import java.util.UUID;
 public class MinioUtils {
 
     private final MinioClient minioClient;
+    private final MinioConfig minioConfig;
 
     @Value("${minio.bucket:mindtalk}")
     private String bucket;
+
+    public String getBucket() {
+        return bucket;
+    }
 
     @Value("${minio.presigned-expiry-seconds:3600}")
     private int presignedExpirySeconds;
@@ -61,17 +67,27 @@ public class MinioUtils {
     }
 
     /**
-     * 获取文件访问 URL（预签名，有效期 1 小时）
+     * 获取文件访问 URL（通过后端流代理，避免预签名 Host 校验问题）
      */
+    public String getAccessUrl(String objectKey) {
+        return "/api/files/stream?key=" + objectKey;
+    }
+
+    /**
+     * 获取文件访问 URL（通过 nginx /storage 代理，避免暴露内网地址）
+     * @deprecated 预签名 URL 在反向代理后有 Host header 校验问题，改用 {@link #getAccessUrl(String)}
+     */
+    @Deprecated
     public String getPresignedUrl(String objectKey) {
         try {
-            return minioClient.getPresignedObjectUrl(
+            String url = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .bucket(bucket)
                             .object(objectKey)
                             .method(Method.GET)
                             .expiry(presignedExpirySeconds)
                             .build());
+            return url.replace(minioConfig.getInternalEndpoint(), "/storage");
         } catch (Exception e) {
             log.error("[MinIO] 获取预签名 URL 失败 key={}", objectKey, e);
             return null;

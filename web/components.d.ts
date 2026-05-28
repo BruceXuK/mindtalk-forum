@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AnnouncementBar: typeof import('./src/components/announcement/AnnouncementBar.vue')['default']
     AppHeader: typeof import('./src/components/layout/AppHeader.vue')['default']
     AppRightSidebar: typeof import('./src/components/layout/AppRightSidebar.vue')['default']
     AppSidebar: typeof import('./src/components/layout/AppSidebar.vue')['default']
@@ -19,6 +20,7 @@ declare module 'vue' {
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElCheckboxGroup: typeof import('element-plus/es')['ElCheckboxGroup']
     ElCol: typeof import('element-plus/es')['ElCol']
+    ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
     ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
@@ -27,6 +29,7 @@ declare module 'vue' {
     ElFormItem: typeof import('element-plus/es')['ElFormItem']
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
+    ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElMenu: typeof import('element-plus/es')['ElMenu']
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElOption: typeof import('element-plus/es')['ElOption']
@@ -47,6 +50,7 @@ declare module 'vue' {
     EmptyState: typeof import('./src/components/common/EmptyState.vue')['default']
     MobileDrawer: typeof import('./src/components/layout/MobileDrawer.vue')['default']
     PostCard: typeof import('./src/components/post/PostCard.vue')['default']
+    ReportDialog: typeof import('./src/components/common/ReportDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SkeletonCard: typeof import('./src/components/common/SkeletonCard.vue')['default']

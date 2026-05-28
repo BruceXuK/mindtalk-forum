@@ -45,6 +45,8 @@ public interface AdminService {
 
     void handleReport(Long adminId, Long reportId, ReportHandleDTO dto);
 
+    void createReport(Long userId, CreateReportDTO dto);
+
     // 权限管理
     List<RoleVO> getAllRoles();
 

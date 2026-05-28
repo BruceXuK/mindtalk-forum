@@ -25,4 +25,6 @@ public class CategoryVO {
     private Integer sortOrder;
 
     private Integer postCount;
+
+    private Integer status;
 }

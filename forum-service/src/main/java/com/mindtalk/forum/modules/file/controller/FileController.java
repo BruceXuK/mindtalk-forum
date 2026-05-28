@@ -2,6 +2,8 @@ package com.mindtalk.forum.modules.file.controller;
 
 import com.mindtalk.common.model.Result;
 import com.mindtalk.forum.common.utils.MinioUtils;
+import io.minio.GetObjectArgs;
+import io.minio.MinioClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -11,9 +13,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import jakarta.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.*;
 
 @Slf4j
@@ -24,6 +29,7 @@ import java.util.*;
 public class FileController {
 
     private final MinioUtils minioUtils;
+    private final MinioClient minioClient;
 
     private static final int MAX_WIDTH = 1920;
     private static final int THUMB_WIDTH = 400;
@@ -93,12 +99,12 @@ public class FileController {
             // Upload compressed original
             String origKey = baseName + ".jpg";
             minioUtils.uploadBytes(compressedBytes, origKey, "image/jpeg");
-            String originalUrl = minioUtils.getPresignedUrl(origKey);
+            String originalUrl = minioUtils.getAccessUrl(origKey);
 
             // Upload thumbnail
             String thumbKey = baseName + "_thumb.jpg";
             minioUtils.uploadBytes(thumbBytes, thumbKey, "image/jpeg");
-            String thumbnailUrl = minioUtils.getPresignedUrl(thumbKey);
+            String thumbnailUrl = minioUtils.getAccessUrl(thumbKey);
 
             log.info("[上传] 原图 {}x{} -> 压缩 {}KB, 缩略图 {}KB",
                     origWidth, origHeight, compressedBytes.length / 1024, thumbBytes.length / 1024);
@@ -112,6 +118,37 @@ public class FileController {
         } catch (Exception e) {
             log.error("[上传] 图片处理失败", e);
             return Result.fail(500, "图片处理失败");
+        }
+    }
+
+    @Operation(summary = "流式读取文件（绕过 MinIO 预签名 Host 校验）")
+    @GetMapping("/stream")
+    public void stream(@RequestParam("key") String objectKey, HttpServletResponse response) {
+        try (InputStream stream = minioClient.getObject(GetObjectArgs.builder()
+                .bucket(minioUtils.getBucket())
+                .object(objectKey)
+                .build())) {
+
+            String contentType = "application/octet-stream";
+            if (objectKey.endsWith(".png")) contentType = "image/png";
+            else if (objectKey.endsWith(".jpg") || objectKey.endsWith(".jpeg")) contentType = "image/jpeg";
+            else if (objectKey.endsWith(".webp")) contentType = "image/webp";
+            else if (objectKey.endsWith(".gif")) contentType = "image/gif";
+            else if (objectKey.endsWith(".svg")) contentType = "image/svg+xml";
+
+            response.setContentType(contentType);
+            response.setHeader("Cache-Control", "public, max-age=86400");
+
+            OutputStream out = response.getOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = stream.read(buf)) != -1) {
+                out.write(buf, 0, n);
+            }
+            out.flush();
+        } catch (Exception e) {
+            log.error("[文件] 流式读取失败 key={}", objectKey, e);
+            response.setStatus(404);
         }
     }
 }

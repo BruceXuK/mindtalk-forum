@@ -8,7 +8,9 @@ import com.mindtalk.common.constant.Constants;
 import com.mindtalk.common.exception.BusinessException;
 import com.mindtalk.forum.common.utils.RedisUtils;
 import com.mindtalk.forum.modules.post.dto.CreateTagDTO;
+import com.mindtalk.forum.modules.post.entity.PostTag;
 import com.mindtalk.forum.modules.post.entity.Tag;
+import com.mindtalk.forum.modules.post.mapper.PostTagMapper;
 import com.mindtalk.forum.modules.post.mapper.TagMapper;
 import com.mindtalk.forum.modules.post.service.TagService;
 import com.mindtalk.forum.modules.post.vo.TagVO;
@@ -29,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class TagServiceImpl implements TagService {
 
     private final TagMapper tagMapper;
+    private final PostTagMapper postTagMapper;
     private final RedisUtils redisUtils;
     private final ObjectMapper objectMapper;
 
@@ -83,7 +86,7 @@ public class TagServiceImpl implements TagService {
 
         redisUtils.delete(CACHE_KEY);
         log.info("[标签] 创建成功 id={} name={}", tag.getId(), tag.getName());
-        return TagVO.builder().id(tag.getId()).name(tag.getName()).postCount(0).build();
+        return TagVO.builder().id(tag.getId()).name(tag.getName()).postCount(0).status(tag.getStatus()).build();
     }
 
     @Override
@@ -101,7 +104,7 @@ public class TagServiceImpl implements TagService {
         redisUtils.delete(CACHE_KEY);
         log.info("[标签] 编辑成功 id={}", id);
         return TagVO.builder().id(tag.getId()).name(tag.getName())
-                .postCount(tag.getPostCount()).build();
+                .postCount(tag.getPostCount()).status(tag.getStatus()).build();
     }
 
     @Override
@@ -111,8 +114,38 @@ public class TagServiceImpl implements TagService {
         if (tag == null) {
             throw BusinessException.notFound("标签不存在");
         }
+        LambdaQueryWrapper<PostTag> ptWrapper = new LambdaQueryWrapper<>();
+        ptWrapper.eq(PostTag::getTagId, id);
+        long refCount = postTagMapper.selectCount(ptWrapper);
+        if (refCount > 0) {
+            throw BusinessException.conflict("该标签下关联了 " + refCount + " 篇帖子，请先解除关联后再删除");
+        }
         tagMapper.deleteById(id);
         redisUtils.delete(CACHE_KEY);
         log.info("[标签] 删除成功 id={}", id);
+    }
+
+    @Override
+    public List<TagVO> listAll() {
+        LambdaQueryWrapper<Tag> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(Tag::getPostCount);
+        return tagMapper.selectList(wrapper).stream()
+                .map(t -> TagVO.builder()
+                        .id(t.getId()).name(t.getName()).description(t.getDescription())
+                        .postCount(t.getPostCount()).status(t.getStatus())
+                        .build()).toList();
+    }
+
+    @Override
+    @Transactional
+    public void toggleStatus(Long id) {
+        Tag tag = tagMapper.selectById(id);
+        if (tag == null) {
+            throw BusinessException.notFound("标签不存在");
+        }
+        tag.setStatus(tag.getStatus() == 1 ? 0 : 1);
+        tagMapper.updateById(tag);
+        redisUtils.delete(CACHE_KEY);
+        log.info("[标签] 状态切换 id={} status={}", id, tag.getStatus());
     }
 }

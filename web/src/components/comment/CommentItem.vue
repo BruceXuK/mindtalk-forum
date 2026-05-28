@@ -23,6 +23,9 @@
         <span v-if="canDelete" class="action-btn danger" @click="$emit('delete', comment.id)">
           删除
         </span>
+        <span class="action-btn report" @click="showReportDialog = true">
+          举报
+        </span>
       </div>
 
       <!-- Inline reply form -->
@@ -69,6 +72,12 @@
         </button>
       </div>
     </div>
+
+    <ReportDialog
+      v-model="showReportDialog"
+      target-type="COMMENT"
+      :target-id="comment.id"
+    />
   </div>
 </template>
 
@@ -78,6 +87,7 @@ import type { CommentVO } from '@/types'
 import { commentApi } from '@/api/modules/comment'
 import { formatRelativeTime } from '@/utils'
 import { Star, StarFilled, ChatDotRound } from '@element-plus/icons-vue'
+import ReportDialog from '@/components/common/ReportDialog.vue'
 
 const props = defineProps<{ comment: CommentVO; isReply?: boolean; canDelete?: boolean }>()
 const emit = defineEmits<{
@@ -88,6 +98,7 @@ const emit = defineEmits<{
 }>()
 
 const showReplyInput = ref(false)
+const showReportDialog = ref(false)
 const replyText = ref('')
 const submitting = ref(false)
 

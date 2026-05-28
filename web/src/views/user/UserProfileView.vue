@@ -2,9 +2,15 @@
   <div class="profile-page" v-loading="loading">
     <template v-if="user">
       <div class="profile-header card-base">
-        <el-avatar :size="88" :src="user.avatarUrl" class="profile-avatar">
-          {{ user.nickname?.charAt(0) || 'U' }}
-        </el-avatar>
+        <div class="avatar-wrapper" :class="{ clickable: isSelf }" @click="isSelf && triggerUpload()">
+          <el-avatar :size="88" :src="user.avatarUrl" class="profile-avatar">
+            {{ user.nickname?.charAt(0) || 'U' }}
+          </el-avatar>
+          <div v-if="isSelf" class="avatar-overlay">
+            <el-icon :size="18"><Camera /></el-icon>
+          </div>
+        </div>
+        <input ref="avatarInputRef" type="file" accept="image/*" style="display: none" @change="handleAvatarChange" />
         <div class="profile-info">
           <h2 class="profile-name">{{ user.nickname }}</h2>
           <p class="profile-bio" v-if="user.bio">{{ user.bio }}</p>
@@ -159,7 +165,7 @@ import type { UserProfileVO, PostVO, SeriesVO, ReadingHistoryVO, ReadLaterVO, Ba
 import PostCard from '@/components/post/PostCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { ElMessage } from 'element-plus'
-import { Location, Medal } from '@element-plus/icons-vue'
+import { Location, Medal, Camera } from '@element-plus/icons-vue'
 import { formatRelativeTime } from '@/utils'
 
 function formatDate(dateStr: string) {
@@ -183,6 +189,8 @@ const badges = ref<BadgeVO[]>([])
 const activeTab = ref<'posts' | 'series' | 'drafts' | 'readLater' | 'history'>('posts')
 const loading = ref(false)
 const isFollowing = ref(false)
+const avatarInputRef = ref<HTMLInputElement>()
+const loadingAvatar = ref(false)
 const showEdit = ref(false)
 const saving = ref(false)
 const editForm = ref({ nickname: '', bio: '', location: '' })
@@ -192,6 +200,29 @@ const isSelf = computed(() => userId.value === userStore.userInfo?.id)
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 
 onMounted(loadProfile)
+
+function triggerUpload() {
+  avatarInputRef.value?.click()
+}
+
+async function handleAvatarChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.warning('头像图片不能超过 2MB')
+    input.value = ''
+    return
+  }
+  loadingAvatar.value = true
+  try {
+    await userApi.uploadAvatar(file)
+    // 重新加载 profile 获取完整最新数据
+    loadProfile()
+    ElMessage.success('头像已更新')
+  } catch { /* handled */ }
+  finally { loadingAvatar.value = false; input.value = '' }
+}
 
 async function loadProfile() {
   if (!userId.value) return
@@ -326,7 +357,13 @@ async function saveProfile() {
 <style lang="scss" scoped>
 .profile-page { width: 100%; }
 .profile-header { display: flex; align-items: flex-start; gap: var(--spacing-xl); padding: var(--spacing-xl); margin-bottom: var(--spacing-lg); }
-.profile-avatar { flex-shrink: 0; }
+.avatar-wrapper { position: relative; flex-shrink: 0; &.clickable { cursor: pointer; } }
+.avatar-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+  color: #fff; opacity: 0; transition: opacity var(--transition-fast);
+  .avatar-wrapper.clickable:hover & { opacity: 1; }
+}
 .profile-info { flex: 1; }
 .profile-name { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-text-primary); margin-bottom: var(--spacing-xs); }
 .profile-bio { font-size: var(--font-size-base); color: var(--color-text-secondary); margin-bottom: var(--spacing-md); line-height: var(--line-height-normal); }

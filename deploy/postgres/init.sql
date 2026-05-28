@@ -791,6 +791,88 @@ COMMENT ON COLUMN sensitive_words.replacement IS '替换文本';
 CREATE UNIQUE INDEX uk_sw_word ON sensitive_words(word) WHERE deleted = 0;
 
 -- ============================================================
+-- 数据字典类型表
+-- ============================================================
+CREATE TABLE dict_types (
+    id              BIGSERIAL       PRIMARY KEY,
+    code            VARCHAR(50)     NOT NULL,
+    name            VARCHAR(100)    NOT NULL,
+    description     VARCHAR(200),
+    status          SMALLINT        NOT NULL DEFAULT 1,
+    create_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
+    update_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
+    deleted         SMALLINT        NOT NULL DEFAULT 0
+);
+
+COMMENT ON TABLE  dict_types              IS '数据字典类型表';
+COMMENT ON COLUMN dict_types.code         IS '字典编码：NOTIFY_TYPE/REPORT_REASON/ANNOUNCE_LEVEL/REPORT_TARGET_TYPE';
+COMMENT ON COLUMN dict_types.name         IS '字典名称';
+COMMENT ON COLUMN dict_types.status       IS '状态：1-启用 0-禁用';
+
+CREATE UNIQUE INDEX uk_dict_types_code ON dict_types (code) WHERE deleted = 0;
+
+-- ============================================================
+-- 数据字典项表
+-- ============================================================
+CREATE TABLE dict_items (
+    id              BIGSERIAL       PRIMARY KEY,
+    type_code       VARCHAR(50)     NOT NULL,
+    item_key        VARCHAR(50)     NOT NULL,
+    item_value      VARCHAR(100)    NOT NULL,
+    sort_order      INT             DEFAULT 0,
+    extra           VARCHAR(200),
+    status          SMALLINT        NOT NULL DEFAULT 1,
+    create_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
+    update_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
+    deleted         SMALLINT        NOT NULL DEFAULT 0
+);
+
+COMMENT ON TABLE  dict_items               IS '数据字典项表';
+COMMENT ON COLUMN dict_items.type_code     IS '关联 dict_types.code';
+COMMENT ON COLUMN dict_items.item_key      IS '存储值';
+COMMENT ON COLUMN dict_items.item_value    IS '显示值';
+COMMENT ON COLUMN dict_items.extra         IS '扩展字段（如 ElementPlus tag type）';
+COMMENT ON COLUMN dict_items.status        IS '状态：1-启用 0-禁用';
+
+CREATE UNIQUE INDEX uk_dict_items_key ON dict_items (type_code, item_key) WHERE deleted = 0;
+CREATE INDEX idx_dict_items_type ON dict_items (type_code, status, sort_order) WHERE deleted = 0;
+
+-- ============================================================
+-- 公告表
+-- ============================================================
+CREATE TABLE announcements (
+    id              BIGSERIAL       PRIMARY KEY,
+    title           VARCHAR(200)    NOT NULL,
+    content         TEXT,
+    summary         VARCHAR(500),
+    level           VARCHAR(20)     NOT NULL DEFAULT 'INFO',
+    status          SMALLINT        NOT NULL DEFAULT 0,
+    is_pinned       BOOLEAN         NOT NULL DEFAULT FALSE,
+    publish_time    TIMESTAMP,
+    expire_time     TIMESTAMP,
+    sort_order      INT             DEFAULT 0,
+    view_count      INT             DEFAULT 0,
+    created_by      BIGINT,
+    create_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
+    update_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
+    deleted         SMALLINT        NOT NULL DEFAULT 0
+);
+
+COMMENT ON TABLE  announcements              IS '公告表';
+COMMENT ON COLUMN announcements.title         IS '公告标题';
+COMMENT ON COLUMN announcements.content       IS '公告正文';
+COMMENT ON COLUMN announcements.summary       IS '简短摘要（横幅展示）';
+COMMENT ON COLUMN announcements.level         IS '公告级别：INFO/WARNING/IMPORTANT';
+COMMENT ON COLUMN announcements.status        IS '状态：0-草稿 1-已发布 2-已撤回';
+COMMENT ON COLUMN announcements.is_pinned     IS '是否置顶';
+COMMENT ON COLUMN announcements.publish_time  IS '发布时间';
+COMMENT ON COLUMN announcements.expire_time   IS '过期时间';
+COMMENT ON COLUMN announcements.created_by    IS '发布人用户 ID';
+COMMENT ON COLUMN announcements.deleted       IS '逻辑删除：0-正常 1-已删除';
+
+CREATE INDEX idx_announcements_status ON announcements (status, is_pinned, sort_order) WHERE deleted = 0;
+
+-- ============================================================
 -- 初始化基础数据（角色 & 权限）
 -- ============================================================
 
@@ -857,6 +939,35 @@ INSERT INTO badges (code, name, description, category, sort_order) VALUES
     ('TWENTY_COMMENTS', '评论家',   '发表20条评论',         'social',  8);
 
 -- ============================================================
+-- 初始化数据字典
+-- ============================================================
+INSERT INTO dict_types (code, name, description) VALUES
+    ('NOTIFY_TYPE',        '通知类型',   '系统通知类型枚举'),
+    ('REPORT_REASON',      '举报原因',   '用户举报可选原因'),
+    ('ANNOUNCE_LEVEL',     '公告级别',   '公告重要程度分级'),
+    ('REPORT_TARGET_TYPE', '举报目标类型', '举报可针对的内容类型');
+
+INSERT INTO dict_items (type_code, item_key, item_value, sort_order, extra) VALUES
+    ('NOTIFY_TYPE', 'LIKE',    '点赞通知',   1, ''),
+    ('NOTIFY_TYPE', 'COMMENT', '评论通知',   2, ''),
+    ('NOTIFY_TYPE', 'FOLLOW',  '关注通知',   3, ''),
+    ('NOTIFY_TYPE', 'MENTION', '@提及通知',  4, ''),
+    ('NOTIFY_TYPE', 'SYSTEM',  '系统通知',   5, ''),
+    ('REPORT_REASON', 'spam',      '垃圾广告', 1, ''),
+    ('REPORT_REASON', 'porn',      '色情低俗', 2, ''),
+    ('REPORT_REASON', 'political', '政治敏感', 3, ''),
+    ('REPORT_REASON', 'abuse',     '辱骂攻击', 4, ''),
+    ('REPORT_REASON', 'fake',      '虚假信息', 5, ''),
+    ('REPORT_REASON', 'copyright', '侵权行为', 6, ''),
+    ('REPORT_REASON', 'other',     '其他',     7, ''),
+    ('ANNOUNCE_LEVEL', 'INFO',      '信息', 1, ''),
+    ('ANNOUNCE_LEVEL', 'WARNING',   '警告', 2, 'warning'),
+    ('ANNOUNCE_LEVEL', 'IMPORTANT', '重要', 3, 'danger'),
+    ('REPORT_TARGET_TYPE', 'POST',    '帖子', 1, ''),
+    ('REPORT_TARGET_TYPE', 'COMMENT', '评论', 2, ''),
+    ('REPORT_TARGET_TYPE', 'USER',    '用户', 3, '');
+
+-- ============================================================
 -- 初始化默认超级管理员
 -- 用户名: admin  密码: admin123
 -- ============================================================
@@ -909,7 +1020,9 @@ BEGIN
             'badges', 'user_badges',
             'tag_subscriptions', 'category_subscriptions',
             'notification_settings',
-            'sensitive_words'
+            'sensitive_words',
+            'announcements',
+            'dict_types', 'dict_items'
         ])
     LOOP
         EXECUTE format('

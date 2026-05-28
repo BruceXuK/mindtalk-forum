@@ -41,9 +41,11 @@ public class SecurityConfig {
                 // 公开读取
                 .requestMatchers(HttpMethod.GET,
                         "/posts/**", "/comments/**", "/users/*/profile", "/categories/**", "/tags/**",
-                        "/search/**", "/rss/**").permitAll()
+                        "/search/**", "/rss/**", "/files/stream", "/announcements/**", "/series/**", "/dicts/**").permitAll()
                 // 浏览计数（匿名）
                 .requestMatchers(HttpMethod.POST, "/posts/*/view").permitAll()
+                // 举报提交（需登录）
+                .requestMatchers(HttpMethod.POST, "/reports").authenticated()
                 // 管理接口需要 ADMIN 角色
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // 其余需要认证

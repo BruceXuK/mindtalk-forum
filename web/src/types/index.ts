@@ -79,12 +79,15 @@ export interface CategoryVO {
   icon?: string
   sortOrder?: number
   postCount?: number
+  status?: number
 }
 
 export interface TagVO {
   id: number
   name: string
+  description?: string
   postCount?: number
+  status?: number
 }
 
 // ── 评论 ──
@@ -298,4 +301,22 @@ export interface AdminLogVO {
   detail: string
   ip: string
   createTime: string
+}
+
+// ── 公告 ──
+export interface AnnouncementVO {
+  id: number
+  title: string
+  content?: string
+  summary?: string
+  level: string
+  status: number
+  isPinned: boolean
+  publishTime?: string
+  expireTime?: string
+  sortOrder?: number
+  viewCount?: number
+  createdBy?: number
+  createTime: string
+  updateTime: string
 }

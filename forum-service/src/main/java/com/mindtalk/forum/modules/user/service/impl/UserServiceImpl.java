@@ -307,7 +307,7 @@ public class UserServiceImpl implements UserService {
         }
 
         String objectKey = minioUtils.upload(file, "avatar");
-        String avatarUrl = minioUtils.getPresignedUrl(objectKey);
+        String avatarUrl = minioUtils.getAccessUrl(objectKey);
 
         LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
         wrapper.set(User::getAvatarUrl, avatarUrl).eq(User::getId, userId);

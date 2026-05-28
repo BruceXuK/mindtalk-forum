@@ -9,7 +9,9 @@ import com.mindtalk.common.exception.BusinessException;
 import com.mindtalk.forum.common.utils.RedisUtils;
 import com.mindtalk.forum.modules.post.dto.CreateCategoryDTO;
 import com.mindtalk.forum.modules.post.entity.Category;
+import com.mindtalk.forum.modules.post.entity.Post;
 import com.mindtalk.forum.modules.post.mapper.CategoryMapper;
+import com.mindtalk.forum.modules.post.mapper.PostMapper;
 import com.mindtalk.forum.modules.post.service.CategoryService;
 import com.mindtalk.forum.modules.post.vo.CategoryVO;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 分类服务实现
@@ -29,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryMapper categoryMapper;
+    private final PostMapper postMapper;
     private final RedisUtils redisUtils;
     private final ObjectMapper objectMapper;
 
@@ -89,7 +94,7 @@ public class CategoryServiceImpl implements CategoryService {
         return CategoryVO.builder()
                 .id(category.getId()).name(category.getName())
                 .description(category.getDescription()).icon(category.getIcon())
-                .sortOrder(category.getSortOrder()).postCount(0).build();
+                .sortOrder(category.getSortOrder()).postCount(0).status(category.getStatus()).build();
     }
 
     @Override
@@ -111,7 +116,7 @@ public class CategoryServiceImpl implements CategoryService {
         return CategoryVO.builder()
                 .id(category.getId()).name(category.getName())
                 .description(category.getDescription()).icon(category.getIcon())
-                .sortOrder(category.getSortOrder()).postCount(category.getPostCount()).build();
+                .sortOrder(category.getSortOrder()).postCount(category.getPostCount()).status(category.getStatus()).build();
     }
 
     @Override
@@ -121,8 +126,54 @@ public class CategoryServiceImpl implements CategoryService {
         if (category == null) {
             throw BusinessException.notFound("分类不存在");
         }
+        LambdaQueryWrapper<Post> postWrapper = new LambdaQueryWrapper<>();
+        postWrapper.eq(Post::getCategoryId, id);
+        long postCount = postMapper.selectCount(postWrapper);
+        if (postCount > 0) {
+            throw BusinessException.conflict("该分类下有 " + postCount + " 篇帖子，请先转移后再删除");
+        }
         categoryMapper.deleteById(id);
         redisUtils.delete(CACHE_KEY);
         log.info("[分类] 删除成功 id={}", id);
+    }
+
+    @Override
+    public List<CategoryVO> listAll() {
+        LambdaQueryWrapper<Category> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(Category::getSortOrder);
+        return categoryMapper.selectList(wrapper).stream()
+                .map(c -> CategoryVO.builder()
+                        .id(c.getId()).name(c.getName()).description(c.getDescription())
+                        .icon(c.getIcon()).sortOrder(c.getSortOrder()).postCount(c.getPostCount())
+                        .status(c.getStatus())
+                        .build()).toList();
+    }
+
+    @Override
+    @Transactional
+    public void toggleStatus(Long id) {
+        Category category = categoryMapper.selectById(id);
+        if (category == null) {
+            throw BusinessException.notFound("分类不存在");
+        }
+        category.setStatus(category.getStatus() == 1 ? 0 : 1);
+        categoryMapper.updateById(category);
+        redisUtils.delete(CACHE_KEY);
+        log.info("[分类] 状态切换 id={} status={}", id, category.getStatus());
+    }
+
+    @Override
+    @Transactional
+    public void batchSort(List<Map<String, Object>> items) {
+        for (Map<String, Object> item : items) {
+            Long id = Long.valueOf(item.get("id").toString());
+            Integer sortOrder = Integer.valueOf(item.get("sortOrder").toString());
+            Category category = new Category();
+            category.setId(id);
+            category.setSortOrder(sortOrder);
+            categoryMapper.updateById(category);
+        }
+        redisUtils.delete(CACHE_KEY);
+        log.info("[分类] 批量排序完成 count={}", items.size());
     }
 }

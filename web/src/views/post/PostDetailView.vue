@@ -23,15 +23,21 @@
     <!-- Main Content -->
     <main class="detail-main" v-if="post">
       <article class="detail-card card-base">
-        <!-- Badges -->
-        <div class="detail-badges" v-if="post.isPinned || post.isFeatured">
-          <span v-if="post.isPinned" class="badge badge-pin">
-            <el-icon><Top /></el-icon> 置顶
-            <span v-if="post.pinnedUntil" class="badge-expiry">至 {{ formatDate(post.pinnedUntil) }}</span>
-          </span>
-          <span v-if="post.isFeatured" class="badge badge-featured">
-            <el-icon><StarFilled /></el-icon> 精华
-            <span v-if="post.featuredUntil" class="badge-expiry">至 {{ formatDate(post.featuredUntil) }}</span>
+        <!-- Badges + View Count -->
+        <div class="detail-badges">
+          <div class="detail-badges__left">
+            <span v-if="post.isPinned" class="badge badge-pin">
+              <el-icon><Top /></el-icon> 置顶
+              <span v-if="post.pinnedUntil" class="badge-expiry">至 {{ formatDate(post.pinnedUntil) }}</span>
+            </span>
+            <span v-if="post.isFeatured" class="badge badge-featured">
+              <el-icon><StarFilled /></el-icon> 精华
+              <span v-if="post.featuredUntil" class="badge-expiry">至 {{ formatDate(post.featuredUntil) }}</span>
+            </span>
+          </div>
+          <span class="view-count-badge" v-if="post.viewCount">
+            <el-icon><View /></el-icon>
+            <span>{{ formatCount(post.viewCount) }} 阅读</span>
           </span>
         </div>
 
@@ -40,22 +46,21 @@
 
         <!-- Author Row -->
         <div class="author-row">
-          <router-link :to="`/users/${post.author?.id}`" class="author-link">
-            <el-avatar :size="44" :src="post.author?.avatarUrl" class="author-avatar">
-              {{ post.author?.nickname?.charAt(0) || 'U' }}
-            </el-avatar>
-            <div class="author-meta">
-              <span class="author-name">{{ post.author?.nickname }}</span>
-              <span class="author-sub">
-                <span>{{ formatTime(post.createTime) }} 发布</span>
-                <span v-if="post.updateTime !== post.createTime" class="edited-mark">
-                  · 编辑于 {{ formatTime(post.updateTime) }}
+          <div class="author-row__left">
+            <router-link :to="`/users/${post.author?.id}`" class="author-link">
+              <el-avatar :size="44" :src="post.author?.avatarUrl" class="author-avatar">
+                {{ post.author?.nickname?.charAt(0) || 'U' }}
+              </el-avatar>
+              <div class="author-meta">
+                <span class="author-name">{{ post.author?.nickname }}</span>
+                <span class="author-sub">
+                  <span>{{ formatTime(post.createTime) }} 发布</span>
+                  <span v-if="post.updateTime !== post.createTime" class="edited-mark">
+                    · 编辑于 {{ formatTime(post.updateTime) }}
+                  </span>
                 </span>
-              </span>
-            </div>
-          </router-link>
-
-          <div class="author-stats">
+              </div>
+            </router-link>
             <el-button
               v-if="isLoggedIn && !isAuthor && !post.authorIsFollowing"
               type="primary"
@@ -75,14 +80,37 @@
             >
               已关注
             </el-button>
-            <span class="stat-item">
-              <el-icon><View /></el-icon>
-              <span>{{ formatCount(post.viewCount) }}</span>
-            </span>
-            <span class="stat-item">
-              <el-icon><ChatDotRound /></el-icon>
-              <span>{{ formatCount(post.commentCount) }}</span>
-            </span>
+          </div>
+
+          <div class="author-row__actions">
+            <button
+              class="action-btn action-btn--like"
+              :class="{ 'is-active': post.isLiked }"
+              @click="handleLike"
+              v-if="isLoggedIn"
+            >
+              <el-icon :size="18">
+                <StarFilled v-if="post.isLiked" />
+                <Star v-else />
+              </el-icon>
+              <span>{{ formatCount(post.likeCount) }}</span>
+            </button>
+            <button
+              class="action-btn"
+              :class="{ 'is-active': post.isCollected }"
+              @click="handleCollect"
+              v-if="isLoggedIn"
+            >
+              <el-icon :size="18">
+                <FolderChecked v-if="post.isCollected" />
+                <FolderAdd v-else />
+              </el-icon>
+              <span>{{ post.isCollected ? '已收藏' : '收藏' }}</span>
+            </button>
+            <button class="action-btn" @click="handleShare">
+              <el-icon :size="16"><Share /></el-icon>
+              <span>分享</span>
+            </button>
           </div>
         </div>
 
@@ -116,59 +144,47 @@
           </div>
         </div>
 
-        <!-- Action Bar -->
-        <div class="action-bar" v-if="isLoggedIn">
-          <button
-            class="action-btn"
-            :class="{ 'is-active': post.isLiked }"
-            @click="handleLike"
-          >
-            <el-icon :size="18">
-              <StarFilled v-if="post.isLiked" />
-              <Star v-else />
-            </el-icon>
-            <span>{{ post.likeCount > 0 ? formatCount(post.likeCount) : '点赞' }}</span>
-          </button>
-          <button
-            class="action-btn"
-            :class="{ 'is-active': post.isCollected }"
-            @click="handleCollect"
-          >
-            <el-icon :size="18">
-              <FolderChecked v-if="post.isCollected" />
-              <FolderAdd v-else />
-            </el-icon>
-            <span>收藏</span>
-          </button>
-          <button
-            class="action-btn"
-            :class="{ 'is-active': isReadLater }"
-            @click="handleReadLater"
-          >
-            <el-icon :size="18"><Reading /></el-icon>
-            <span>{{ isReadLater ? '已标记' : '稍后阅读' }}</span>
-          </button>
-          <button class="action-btn" @click="scrollToComment">
-            <el-icon :size="18"><ChatDotRound /></el-icon>
-            <span>评论</span>
-          </button>
-          <button class="action-btn" @click="handleShare">
-            <el-icon :size="18"><Share /></el-icon>
-            <span>分享</span>
-          </button>
-          <div class="action-bar__right">
-            <button v-if="canEdit" class="action-btn" @click="$router.push(`/posts/${post.id}/edit`)">
-              <el-icon :size="18"><EditPen /></el-icon>
-              <span>编辑</span>
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+          <div class="bottom-bar__left">
+            <button class="action-btn" @click="scrollToComment">
+              <el-icon :size="16"><ChatDotRound /></el-icon>
+              <span>{{ post.commentCount ? `${formatCount(post.commentCount)} 条评论` : '评论' }}</span>
             </button>
-            <el-popconfirm title="确定删除该帖子？" @confirm="handleDelete">
-              <template #reference>
-                <button v-if="canEdit" class="action-btn danger">
-                  <el-icon :size="18"><Delete /></el-icon>
-                  <span>删除</span>
-                </button>
-              </template>
-            </el-popconfirm>
+            <button
+              v-if="isLoggedIn"
+              class="action-btn"
+              :class="{ 'is-active': isReadLater }"
+              @click="handleReadLater"
+            >
+              <el-icon :size="16"><Reading /></el-icon>
+              <span>{{ isReadLater ? '已标记' : '稍后阅读' }}</span>
+            </button>
+          </div>
+
+          <div class="bottom-bar__right">
+            <button
+              v-if="isLoggedIn"
+              class="action-btn action-btn--muted"
+              @click="showReportDialog = true"
+            >
+              <el-icon :size="14"><WarningFilled /></el-icon>
+              <span>举报</span>
+            </button>
+            <template v-if="canEdit">
+              <button class="action-btn" @click="$router.push(`/posts/${post.id}/edit`)">
+                <el-icon :size="14"><EditPen /></el-icon>
+                <span>编辑</span>
+              </button>
+              <el-popconfirm title="确定删除该帖子？" @confirm="handleDelete">
+                <template #reference>
+                  <button class="action-btn danger">
+                    <el-icon :size="14"><Delete /></el-icon>
+                    <span>删除</span>
+                  </button>
+                </template>
+              </el-popconfirm>
+            </template>
           </div>
         </div>
       </article>
@@ -366,6 +382,13 @@
         <img :src="previewImageUrl" class="image-overlay__img" alt="预览" />
       </div>
     </Transition>
+
+    <ReportDialog
+      v-if="post"
+      v-model="showReportDialog"
+      target-type="POST"
+      :target-id="post.id"
+    />
   </div>
 </template>
 
@@ -383,6 +406,7 @@ import { useUserStore } from '@/stores/modules/user'
 import type { PostVO, CommentVO, PostSeriesContextVO } from '@/types'
 import CommentItem from '@/components/comment/CommentItem.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ReportDialog from '@/components/common/ReportDialog.vue'
 import { formatTime, formatRelativeTime, formatCount } from '@/utils'
 
 function formatDate(dateStr: string) {
@@ -396,7 +420,7 @@ import type { UserVO } from '@/types'
 import {
   View, ChatDotRound, Star, StarFilled, EditPen, Delete,
   Top, Folder, FolderChecked, FolderAdd, Close,
-  User, Collection, ArrowLeft, ArrowRight, Share, Reading,
+  User, Collection, ArrowLeft, ArrowRight, Share, Reading, WarningFilled,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -416,13 +440,14 @@ const postId = computed(() => Number(route.params.id))
 const commentPage = ref(1)
 const commentTotal = ref(0)
 const commentSort = ref<'create_time' | 'like_count'>('create_time')
+const showReportDialog = ref(false)
 const commentScrollRef = ref<HTMLElement>()
-const virtualizer = useVirtualizer({
+const virtualizer = useVirtualizer(computed(() => ({
   count: comments.value.length,
   getScrollElement: () => commentScrollRef.value ?? null,
   estimateSize: () => 140,
   overscan: 5
-} as any)
+})))
 const previewImageUrl = ref('')
 
 // ── @Mention ──
@@ -736,6 +761,7 @@ async function submitComment() {
     commentText.value = ''
     commentMentionedUserIds.value = []
     ElMessage.success('评论成功')
+    userStore.fetchUnreadCount()
     commentPage.value = 1
     await loadComments()
     if (post.value) post.value.commentCount++
@@ -756,6 +782,7 @@ async function handleSubmitReply(data: { parentId: number; replyToId: number; co
       replyToId: data.replyToId
     })
     ElMessage.success('回复成功')
+    userStore.fetchUnreadCount()
     commentPage.value = 1
     await loadComments()
     if (post.value) post.value.commentCount++
@@ -877,8 +904,23 @@ onUnmounted(() => {
 // ── Badges ──
 .detail-badges {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
+
+  &__left {
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+}
+
+.view-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .badge {
@@ -925,6 +967,18 @@ onUnmounted(() => {
   padding-bottom: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
   border-bottom: 1px solid var(--color-divider);
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
 }
 
 .author-link {
@@ -960,19 +1014,6 @@ onUnmounted(() => {
 
 .edited-mark {
   font-style: italic;
-}
-
-.author-stats {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
 }
 
 // ── Content Body ──
@@ -1031,24 +1072,33 @@ onUnmounted(() => {
   }
 }
 
-// ── Action Bar ──
-.action-bar {
+// ── Bottom Bar ──
+.bottom-bar {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  justify-content: space-between;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
 
   &__right {
-    margin-left: auto;
     display: flex;
-    gap: var(--spacing-xs);
+    align-items: center;
+    gap: 2px;
   }
 }
 
+// ── Action Button ──
 .action-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
   background: none;
   border-radius: var(--radius-full);
@@ -1064,12 +1114,49 @@ onUnmounted(() => {
   }
 
   &.is-active {
-    color: var(--color-like);
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &--like {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-md);
+
+    &.is-active {
+      color: #E05252;
+    }
+  }
+
+  &--muted {
+    opacity: 0.45;
+    padding: 4px 10px;
+    font-size: var(--font-size-xs);
+
+    &:hover {
+      opacity: 0.8;
+      background: #FEF2F2;
+      color: var(--color-danger);
+    }
   }
 
   &.danger:hover {
     color: var(--color-danger);
     background: #FEF2F2;
+  }
+}
+
+@media (max-width: 767px) {
+  .action-btn {
+    padding: 6px 8px;
+
+    &--like {
+      font-size: var(--font-size-sm);
+    }
+
+    &--muted {
+      display: none;
+    }
   }
 }
 

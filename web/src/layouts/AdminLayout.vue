@@ -31,6 +31,14 @@
           <el-icon><Lock /></el-icon>
           <span>权限管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/categories">
+          <el-icon><Collection /></el-icon>
+          <span>分类管理</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/tags">
+          <el-icon><PriceTag /></el-icon>
+          <span>标签管理</span>
+        </el-menu-item>
         <el-menu-item index="/admin/stats">
           <el-icon><DataAnalysis /></el-icon>
           <span>统计分析</span>
@@ -38,6 +46,10 @@
         <el-menu-item index="/admin/sensitive-words">
           <el-icon><Warning /></el-icon>
           <span>敏感词</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/announcements">
+          <el-icon><Bell /></el-icon>
+          <span>公告管理</span>
         </el-menu-item>
         <el-menu-item index="/admin/logs">
           <el-icon><Document /></el-icon>
@@ -60,7 +72,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppConfig } from '@/composables/useAppConfig'
-import { User, Document, ChatDotRound, Warning, Lock, DataAnalysis, Back } from '@element-plus/icons-vue'
+import { User, Document, ChatDotRound, Warning, Lock, DataAnalysis, Back, Collection, PriceTag, Bell } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -106,6 +118,7 @@ function goHome() {
 .el-menu {
   border-right: none;
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-footer {

@@ -345,6 +345,11 @@ function loadDraft() {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (!raw) return
     const draft = JSON.parse(raw)
+    // 7 天后草稿过期
+    if (draft.timestamp && Date.now() - draft.timestamp > 7 * 24 * 3600 * 1000) {
+      clearDraft()
+      return
+    }
     if (draft.title) form.title = draft.title
     if (draft.contentText) form.contentText = draft.contentText
     if (draft.categoryId) form.categoryId = draft.categoryId

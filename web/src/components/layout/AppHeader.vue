@@ -34,7 +34,7 @@
 
           <!-- 消息 -->
           <router-link to="/messages" class="icon-btn" title="消息中心">
-            <el-badge :value="unreadCount" :hidden="!unreadCount" :max="99">
+            <el-badge :value="userStore.unreadCount" :hidden="!userStore.unreadCount" :max="99">
               <el-icon :size="18"><Bell /></el-icon>
             </el-badge>
           </router-link>
@@ -83,13 +83,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/modules/user'
 import { useTheme } from '@/composables/useTheme'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAppConfig } from '@/composables/useAppConfig'
-import { messageApi } from '@/api/modules/message'
 import {
   Search, EditPen, Bell, User, ArrowDown, Setting, SwitchButton, Sunny, Moon
 } from '@element-plus/icons-vue'
@@ -100,21 +99,12 @@ const config = useAppConfig()
 const { isDark, toggleTheme } = useTheme()
 const { mobileMenuOpen, toggleMobileMenu } = useSidebar()
 
-const unreadCount = ref(0)
 let pollTimer: ReturnType<typeof setInterval> | null = null
-
-async function fetchUnreadCount() {
-  if (!userStore.isLoggedIn) return
-  try {
-    const res = await messageApi.getUnreadCount()
-    unreadCount.value = res.data
-  } catch { /* ignore */ }
-}
 
 onMounted(() => {
   if (userStore.isLoggedIn) {
-    fetchUnreadCount()
-    pollTimer = setInterval(fetchUnreadCount, config.polling.unreadCount)
+    userStore.fetchUnreadCount()
+    pollTimer = setInterval(() => userStore.fetchUnreadCount(), config.polling.unreadCount)
   }
 })
 

@@ -57,6 +57,7 @@ services:
       - ES_URIS=http://elasticsearch:9200
       - ROCKETMQ_ADDR=rocketmq-namesrv:9876
       - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_PUBLIC_ENDPOINT=http://localhost:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - NACOS_ADDR=nacos:8848

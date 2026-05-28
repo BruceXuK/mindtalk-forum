@@ -14,6 +14,7 @@ import com.mindtalk.forum.modules.admin.entity.Report;
 import com.mindtalk.forum.modules.admin.entity.RolePermission;
 import com.mindtalk.forum.modules.admin.mapper.AdminLogMapper;
 import com.mindtalk.forum.modules.admin.mapper.PermissionMapper;
+import com.mindtalk.forum.modules.dict.service.DictService;
 import com.mindtalk.forum.modules.admin.mapper.ReportMapper;
 import com.mindtalk.forum.modules.admin.mapper.RolePermissionMapper;
 import com.mindtalk.forum.modules.admin.service.AdminService;
@@ -65,6 +66,7 @@ public class AdminServiceImpl implements AdminService {
     private final RolePermissionMapper rolePermissionMapper;
     private final AdminLogMapper adminLogMapper;
     private final PasswordEncoder passwordEncoder;
+    private final DictService dictService;
 
     // ════════════════════════ 用户管理 ════════════════════════
 
@@ -354,6 +356,37 @@ public class AdminServiceImpl implements AdminService {
         reportMapper.updateById(report);
 
         log.info("[举报处理] 管理员{}处理举报{}: status={}", adminId, reportId, dto.getStatus());
+    }
+
+    @Override
+    @Transactional
+    public void createReport(Long userId, CreateReportDTO dto) {
+        if (!dictService.isValidKey("REPORT_TARGET_TYPE", dto.getTargetType())) {
+            throw BusinessException.badRequest("无效的举报目标类型");
+        }
+        if (!dictService.isValidKey("REPORT_REASON", dto.getReason())) {
+            throw BusinessException.badRequest("无效的举报原因");
+        }
+
+        LambdaQueryWrapper<Report> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Report::getReporterId, userId)
+                .eq(Report::getTargetType, dto.getTargetType())
+                .eq(Report::getTargetId, dto.getTargetId())
+                .eq(Report::getStatus, 1);
+        if (reportMapper.selectCount(wrapper) > 0) {
+            throw BusinessException.conflict("您已举报过该内容，请勿重复举报");
+        }
+
+        Report report = Report.builder()
+                .reporterId(userId)
+                .targetType(dto.getTargetType())
+                .targetId(dto.getTargetId())
+                .reason(dto.getReason())
+                .description(dto.getDescription())
+                .status(1)
+                .build();
+        reportMapper.insert(report);
+        log.info("[举报] 用户{}举报{}:{} status=待处理", userId, dto.getTargetType(), dto.getTargetId());
     }
 
     // ════════════════════════ 权限管理 ════════════════════════

@@ -1,5 +1,6 @@
 <template>
   <div class="home-page">
+    <AnnouncementBar />
     <!-- Hero / Welcome -->
     <section class="hero">
       <h1 class="hero-title">{{ config.home.heroTitle }}</h1>
@@ -8,44 +9,6 @@
         <el-icon :size="18"><Search /></el-icon>
         <span>{{ config.search.homePlaceholder }}</span>
         <kbd>{{ config.hotkeys.search }}</kbd>
-      </div>
-    </section>
-
-    <!-- 我的关注（登录后显示） -->
-    <section v-if="userStore.isLoggedIn" class="following-strip">
-      <div class="following-header">
-        <span class="following-title">我的关注</span>
-        <div class="following-search-wrap">
-          <el-input
-            v-model="followingKeyword"
-            placeholder="搜索关注..."
-            size="small"
-            clearable
-          >
-            <template #prefix>
-              <el-icon :size="13"><Search /></el-icon>
-            </template>
-          </el-input>
-        </div>
-      </div>
-      <div v-if="followingUsers.length > 0" class="following-list">
-        <router-link
-          v-for="u in followingUsers"
-          :key="u.id"
-          :to="`/users/${u.id}`"
-          class="following-card"
-        >
-          <el-avatar :size="48" :src="u.avatarUrl">
-            {{ u.nickname?.charAt(0) || 'U' }}
-          </el-avatar>
-          <span class="following-card__name">{{ u.nickname }}</span>
-          <span class="following-card__counts">
-            {{ (u.followingCount || 0) }} 关注 · {{ (u.followerCount || 0) }} 粉丝
-          </span>
-        </router-link>
-      </div>
-      <div v-else-if="!followingLoading" class="following-empty">
-        {{ followingKeyword ? '未找到匹配的关注用户' : '暂未关注任何人，去发现有趣的内容吧' }}
       </div>
     </section>
 
@@ -118,13 +81,13 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { postApi } from '@/api/modules/post'
-import { userApi } from '@/api/modules/user'
 import { useUserStore } from '@/stores/modules/user'
 import { useAppConfig } from '@/composables/useAppConfig'
-import type { PostVO, CategoryVO, UserVO } from '@/types'
+import type { PostVO, CategoryVO } from '@/types'
 import PostCard from '@/components/post/PostCard.vue'
 import SkeletonCard from '@/components/common/SkeletonCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import AnnouncementBar from '@/components/announcement/AnnouncementBar.vue'
 import { Search } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
@@ -142,34 +105,9 @@ const loadingMore = ref(false)
 const sentinelRef = ref<HTMLElement>()
 let observer: IntersectionObserver | null = null
 
-// ── Following ──
-const followingUsers = ref<UserVO[]>([])
-const followingKeyword = ref('')
-const followingLoading = ref(false)
-let searchTimer: ReturnType<typeof setTimeout> | null = null
-
-function loadFollowing(keyword?: string) {
-  if (!userStore.isLoggedIn) return
-  followingLoading.value = true
-  userApi.getFollowing({ keyword: keyword || undefined, size: config.pagination.followingSize })
-    .then(res => { followingUsers.value = res.data || [] })
-    .catch(() => { followingUsers.value = [] })
-    .finally(() => { followingLoading.value = false })
-}
-
-watch(followingKeyword, (val) => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => loadFollowing(val), config.polling.mentionDebounce + 100)
-})
-
-watch(() => userStore.isLoggedIn, (loggedIn) => {
-  if (loggedIn) loadFollowing()
-})
-
 onMounted(() => {
   loadPosts()
   loadCategories()
-  if (userStore.isLoggedIn) loadFollowing()
   setupObserver()
 })
 
@@ -314,82 +252,6 @@ async function loadRanking() {
   }
 }
 
-// ── Following Strip ──
-.following-strip {
-  margin-bottom: var(--spacing-xl);
-  padding-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.following-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.following-title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-}
-
-.following-search-wrap {
-  width: 200px;
-}
-
-.following-list {
-  display: flex;
-  gap: var(--spacing-lg);
-  overflow-x: auto;
-  padding-bottom: var(--spacing-xs);
-
-  &::-webkit-scrollbar {
-    height: 2px;
-  }
-}
-
-.following-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-xs);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  min-width: 68px;
-  flex-shrink: 0;
-
-  &:hover {
-    background: var(--color-bg-secondary);
-  }
-}
-
-.following-card__name {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  max-width: 68px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.following-card__counts {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  white-space: nowrap;
-  text-align: center;
-}
-
-.following-empty {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  padding: var(--spacing-md) 0;
-}
-
 // ── Feed Tabs ──
 .feed-tabs {
   display: flex;
@@ -523,20 +385,6 @@ async function loadRanking() {
   .hero-search {
     height: 42px;
     kbd { display: none; }
-  }
-
-  .following-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-  }
-
-  .following-search-wrap {
-    width: 100%;
-  }
-
-  .following-list {
-    gap: var(--spacing-md);
   }
 
   .category-bar {
