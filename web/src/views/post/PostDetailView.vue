@@ -1742,16 +1742,27 @@ onUnmounted(() => {
     }
   }
 
-  img.content-image {
-    max-width: 100%;
-    border-radius: var(--radius-sm);
-    margin: var(--spacing-md) 0;
-    cursor: zoom-in;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--transition-fast);
+  // ── Content Images ──
+  .content-image-figure {
+    display: block;
+    width: 100%;
+    margin: var(--spacing-xl) 0;
+    padding: 0;
+    text-align: center;
 
-    &:hover {
-      box-shadow: var(--shadow-md);
+    img.content-image {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--radius-md);
+      cursor: zoom-in;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition-fast);
+
+      &:hover {
+        box-shadow: var(--shadow-md);
+      }
     }
   }
 

@@ -106,7 +106,16 @@
       <div class="editor-area">
         <div v-show="!isPreview" class="editor-pane">
           <div class="editor-toolbar">
-            <span class="toolbar-hint">Markdown 编辑器</span>
+            <div class="toolbar-group">
+              <button
+                v-for="btn in toolbarButtons"
+                :key="btn.title"
+                class="toolbar-btn"
+                :title="btn.title"
+                @click="btn.action"
+                v-html="btn.label"
+              ></button>
+            </div>
             <span class="toolbar-count">{{ form.contentText.length }} / 50000</span>
           </div>
           <textarea
@@ -242,6 +251,8 @@ import { postApi } from '@/api/modules/post'
 import { fileApi } from '@/api/modules/file'
 import { renderMarkdown, renderMermaidDiagrams } from '@/composables/useMarkdown'
 import { useMention, parseMentionedUsernames } from '@/composables/useMention'
+import { useMarkdownToolbar } from '@/composables/useMarkdownToolbar'
+import type { ToolbarActions } from '@/composables/useMarkdownToolbar'
 import type { CategoryVO, TagVO, UserVO } from '@/types'
 
 const route = useRoute()
@@ -266,6 +277,20 @@ watch(() => route.params.id, async (newId) => {
 // ── Form state ──
 const titleInputRef = ref<HTMLTextAreaElement>()
 const contentTextareaRef = ref<HTMLTextAreaElement>()
+const toolbarActions: ToolbarActions = useMarkdownToolbar(contentTextareaRef, (v) => { form.contentText = v })
+const toolbarButtons = [
+  { label: '<b>B</b>',   title: '加粗',         action: toolbarActions.bold },
+  { label: '<i>I</i>',   title: '斜体',          action: toolbarActions.italic },
+  { label: '<s>S</s>',   title: '删除线',        action: toolbarActions.strikethrough },
+  { label: '&lt;/&gt;',  title: '行内代码',      action: toolbarActions.inlineCode },
+  { label: 'H',          title: '二级标题',      action: toolbarActions.heading },
+  { label: '"',          title: '引用',          action: toolbarActions.blockquote },
+  { label: '{ }',        title: '代码块',        action: toolbarActions.codeBlock },
+  { label: '•',          title: '无序列表',      action: toolbarActions.unorderedList },
+  { label: '1.',         title: '有序列表',      action: toolbarActions.orderedList },
+  { label: '—',          title: '分割线',        action: toolbarActions.divider },
+  { label: '🔗',         title: '链接',          action: toolbarActions.link },
+]
 const fileInputRef = ref<HTMLInputElement>()
 const titleFocused = ref(false)
 
@@ -909,9 +934,44 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--color-divider);
 }
 
-.toolbar-hint {
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-family);
+
+  &:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+  }
+
+  &:active {
+    background: var(--color-border);
+  }
+
+  :deep(b), :deep(i), :deep(s) {
+    font-size: var(--font-size-sm);
+  }
+
+  :deep(i) {
+    font-family: Georgia, 'Times New Roman', serif;
+  }
 }
 
 .toolbar-count {

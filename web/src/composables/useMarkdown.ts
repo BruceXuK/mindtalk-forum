@@ -212,10 +212,10 @@ export function renderMarkdown(text: string): string {
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>')
 
   // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+  html = html.replace(/(?<!!)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
 
   // Images (not already in code blocks)
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="content-image" loading="lazy" @click="previewImage(\'$2\')" />')
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<figure class="content-image-figure"><img src="$2" alt="$1" class="content-image" loading="lazy" /></figure>')
 
   // Unordered lists
   html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>')
