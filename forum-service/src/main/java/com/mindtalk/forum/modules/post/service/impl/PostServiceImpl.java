@@ -42,6 +42,7 @@ import com.mindtalk.forum.modules.badge.service.BadgeService;
 import com.mindtalk.forum.modules.reading.mapper.ReadingHistoryMapper;
 import com.mindtalk.forum.modules.reading.entity.ReadingHistory;
 import com.mindtalk.forum.modules.admin.service.SensitiveWordService;
+import com.mindtalk.forum.modules.series.service.SeriesService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,7 @@ public class PostServiceImpl implements PostService {
     private final BadgeService badgeService;
     private final ReadingHistoryMapper readingHistoryMapper;
     private final SensitiveWordService sensitiveWordService;
+    private final SeriesService seriesService;
 
     private static final String POST_DETAIL_KEY = Constants.REDIS_PREFIX + "post:detail:";
     private static final String POST_HOT_KEY = Constants.REDIS_PREFIX + "post:hot:";
@@ -116,6 +118,11 @@ public class PostServiceImpl implements PostService {
                     .map(tagId -> PostTag.builder().postId(post.getId()).tagId(tagId).build())
                     .collect(Collectors.toList());
             postTagMapper.batchInsert(postTags);
+        }
+
+        // 关联系列
+        if (dto.getSeriesId() != null) {
+            seriesService.addPost(authorId, dto.getSeriesId(), post.getId());
         }
 
         // 草稿不同步 ES，不清理热门缓存
@@ -394,15 +401,18 @@ public class PostServiceImpl implements PostService {
         Map<Long, User> userMap = userMapper.selectBatchIds(authorIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
 
+        Set<Long> followedAuthorIds = authorIds.isEmpty() ? Collections.emptySet()
+                : new HashSet<>(userFollowMapper.selectFolloweeIdsByFollower(userId, authorIds));
+
         return deduped.stream()
-                .map(post -> toPostVO(post, userMap, Collections.emptyMap(), Collections.emptyMap(), Collections.emptySet()))
+                .map(post -> toPostVO(post, userMap, Collections.emptyMap(), Collections.emptyMap(), followedAuthorIds))
                 .collect(Collectors.toList());
     }
 
     // ════════════════════════ 排行榜 ════════════════════════
 
     @Override
-    public List<PostVO> getRankingPosts(String period, int limit) {
+    public List<PostVO> getRankingPosts(String period, int limit, Long currentUserId) {
         LocalDateTime startTime;
         LocalDateTime now = LocalDateTime.now();
         if ("weekly".equals(period)) {
@@ -412,33 +422,44 @@ public class PostServiceImpl implements PostService {
         }
 
         String cacheKey = "post:ranking:" + period + ":" + limit;
+        List<PostVO> vos = null;
         String cached = redisUtils.get(cacheKey);
         if (cached != null) {
             try {
-                return objectMapper.readValue(cached, new TypeReference<List<PostVO>>() {});
+                vos = objectMapper.readValue(cached, new TypeReference<List<PostVO>>() {});
             } catch (Exception e) {
                 log.debug("[缓存] 排行榜反序列化失败");
             }
         }
 
-        List<Post> posts = postMapper.selectRanking(startTime, limit);
-        List<PostVO> vos;
-        if (posts.isEmpty()) {
-            vos = Collections.emptyList();
-        } else {
-            List<Long> authorIds = posts.stream().map(Post::getAuthorId).distinct().collect(Collectors.toList());
-            Map<Long, User> userMap = userMapper.selectBatchIds(authorIds).stream()
-                    .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
-            vos = posts.stream()
-                    .map(post -> toPostVO(post, userMap, Collections.emptyMap(), Collections.emptyMap(), Collections.emptySet()))
-                    .collect(Collectors.toList());
+        if (vos == null) {
+            List<Post> posts = postMapper.selectRanking(startTime, limit);
+            if (posts.isEmpty()) {
+                vos = Collections.emptyList();
+            } else {
+                List<Long> authorIds = posts.stream().map(Post::getAuthorId).distinct().collect(Collectors.toList());
+                Map<Long, User> userMap = userMapper.selectBatchIds(authorIds).stream()
+                        .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+                vos = posts.stream()
+                        .map(post -> toPostVO(post, userMap, Collections.emptyMap(), Collections.emptyMap(), Collections.emptySet()))
+                        .collect(Collectors.toList());
+            }
+
+            try {
+                redisUtils.set(cacheKey, objectMapper.writeValueAsString(vos), 30, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.warn("[缓存] 排行榜序列化失败");
+            }
         }
 
-        try {
-            redisUtils.set(cacheKey, objectMapper.writeValueAsString(vos), 30, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.warn("[缓存] 排行榜序列化失败");
+        // Overlay follow status for logged-in users
+        if (currentUserId != null && !vos.isEmpty()) {
+            List<Long> authorIds = vos.stream()
+                    .map(v -> v.getAuthor().getId()).distinct().collect(Collectors.toList());
+            Set<Long> followedIds = new HashSet<>(userFollowMapper.selectFolloweeIdsByFollower(currentUserId, authorIds));
+            vos.forEach(v -> v.setAuthorIsFollowing(followedIds.contains(v.getAuthor().getId())));
         }
+
         return vos;
     }
 

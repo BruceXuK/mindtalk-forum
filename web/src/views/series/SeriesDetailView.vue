@@ -20,6 +20,7 @@
           </div>
         </div>
         <div class="series-header__actions" v-if="isOwner">
+          <el-button size="small" type="primary" @click="router.push(`/posts/create?seriesId=${seriesId}`)">写帖子</el-button>
           <el-button size="small" @click="showEditDialog = true">编辑</el-button>
           <el-popconfirm title="确定删除该系列？" @confirm="handleDelete">
             <template #reference>
@@ -32,7 +33,11 @@
       <!-- Post List -->
       <div class="series-posts">
         <PostCard v-for="p in series.posts" :key="p.id" :post="p" />
-        <EmptyState v-if="series.posts.length === 0" title="暂无帖子" description="该系列还没有收录帖子" />
+        <EmptyState v-if="series.posts.length === 0" title="暂无帖子" :description="isOwner ? '在系列中发布你的第一篇帖子' : '该系列还没有收录帖子'">
+          <template v-if="isOwner" #action>
+            <el-button type="primary" @click="router.push(`/posts/create?seriesId=${seriesId}`)">开始写作</el-button>
+          </template>
+        </EmptyState>
       </div>
 
       <!-- Edit Dialog -->

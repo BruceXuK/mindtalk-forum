@@ -8,6 +8,7 @@ export interface CreatePostDTO {
   categoryId: number
   tagIds: number[]
   status?: number   // 0-草稿 1-发布（默认）
+  seriesId?: number
 }
 
 export const postApi = {

@@ -100,6 +100,35 @@
             </button>
           </div>
         </div>
+
+        <div class="meta-row__item" v-if="!isEdit">
+          <label class="meta-row__label">
+            <el-icon><Collection /></el-icon>
+            系列
+          </label>
+          <div v-if="seriesLoading" class="meta-row__skeleton">
+            <span class="skeleton-chip" v-for="i in 2" :key="i"></span>
+          </div>
+          <div v-else-if="userSeries.length > 0" class="chip-group">
+            <button
+              class="chip"
+              :class="{ 'is-active': form.seriesId === null }"
+              @click="form.seriesId = null"
+            >
+              无
+            </button>
+            <button
+              v-for="s in userSeries"
+              :key="s.id"
+              class="chip"
+              :class="{ 'is-active': form.seriesId === s.id }"
+              @click="form.seriesId = s.id"
+            >
+              {{ s.title }}
+            </button>
+          </div>
+          <span v-else class="meta-row__hint">暂无系列</span>
+        </div>
       </div>
 
       <!-- Editor / Preview -->
@@ -244,16 +273,17 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowLeft, Clock, View, Loading, Folder, PriceTag,
+  ArrowLeft, Clock, View, Loading, Folder, PriceTag, Collection,
   Document, UploadFilled, Plus, Close, CopyDocument, WarningFilled
 } from '@element-plus/icons-vue'
 import { postApi } from '@/api/modules/post'
+import { seriesApi } from '@/api/modules/series'
 import { fileApi } from '@/api/modules/file'
 import { renderMarkdown, renderMermaidDiagrams } from '@/composables/useMarkdown'
 import { useMention, parseMentionedUsernames } from '@/composables/useMention'
 import { useMarkdownToolbar } from '@/composables/useMarkdownToolbar'
 import type { ToolbarActions } from '@/composables/useMarkdownToolbar'
-import type { CategoryVO, TagVO, UserVO } from '@/types'
+import type { CategoryVO, TagVO, UserVO, SeriesVO } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -328,14 +358,17 @@ const isPreview = ref(false)
 const submitting = ref(false)
 const categories = ref<CategoryVO[]>([])
 const tags = ref<TagVO[]>([])
+const userSeries = ref<SeriesVO[]>([])
 const categoryLoading = ref(true)
 const tagLoading = ref(true)
+const seriesLoading = ref(true)
 
 const form = reactive({
   title: '',
   contentText: '',
   categoryId: null as number | null,
-  tagIds: [] as number[]
+  tagIds: [] as number[],
+  seriesId: null as number | null
 })
 
 const canPublish = computed(() =>
@@ -357,6 +390,7 @@ function saveDraft() {
     contentText: form.contentText,
     categoryId: form.categoryId,
     tagIds: form.tagIds,
+    seriesId: form.seriesId,
     timestamp: Date.now()
   }
   localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
@@ -379,6 +413,7 @@ function loadDraft() {
     if (draft.contentText) form.contentText = draft.contentText
     if (draft.categoryId) form.categoryId = draft.categoryId
     if (draft.tagIds) form.tagIds = draft.tagIds
+    if (draft.seriesId !== undefined) form.seriesId = draft.seriesId
     draftLoaded = true
   } catch { /* ignore */ }
 }
@@ -389,7 +424,7 @@ function clearDraft() {
 
 // Watch for changes to auto-save
 watch(
-  () => [form.title, form.contentText, form.categoryId, form.tagIds],
+  () => [form.title, form.contentText, form.categoryId, form.tagIds, form.seriesId],
   () => {
     if (!draftLoaded) return
     if (draftTimer) clearTimeout(draftTimer)
@@ -556,6 +591,7 @@ async function handleSaveDraft() {
       tagIds: form.tagIds,
       status: 0,
       mentionedUserIds: mentionedUserIds.value,
+      seriesId: form.seriesId,
     }
     if (isEdit.value) {
       await postApi.update(Number(route.params.id), data)
@@ -583,6 +619,7 @@ async function handleSubmit() {
       categoryId: form.categoryId!,
       tagIds: form.tagIds,
       mentionedUserIds: mentionedUserIds.value,
+      seriesId: form.seriesId,
     }
     if (isEdit.value) {
       await postApi.update(Number(route.params.id), { ...data, status: 1 })
@@ -610,6 +647,12 @@ async function handleSubmit() {
 
 // ── Lifecycle ──
 onMounted(async () => {
+  // Read seriesId from route query
+  const querySeriesId = route.query.seriesId
+  if (querySeriesId) {
+    form.seriesId = Number(querySeriesId)
+  }
+
   // Load draft for new post
   if (!isEdit.value) {
     loadDraft()
@@ -631,6 +674,20 @@ onMounted(async () => {
   } finally {
     categoryLoading.value = false
     tagLoading.value = false
+  }
+
+  // Load user series (for new posts only)
+  if (!isEdit.value) {
+    try {
+      const sRes = await seriesApi.getMySeries()
+      userSeries.value = sRes.data
+    } catch {
+      /* handled */
+    } finally {
+      seriesLoading.value = false
+    }
+  } else {
+    seriesLoading.value = false
   }
 
   // Load existing post for edit
@@ -870,6 +927,12 @@ onUnmounted(() => {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-sm);
+  }
+
+  &__hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-tertiary);
+    padding-top: 6px;
   }
 }
 

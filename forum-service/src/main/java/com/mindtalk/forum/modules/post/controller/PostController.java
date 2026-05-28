@@ -65,7 +65,8 @@ public class PostController {
     public Result<List<PostVO>> ranking(
             @RequestParam(defaultValue = "weekly") String period,
             @RequestParam(defaultValue = "20") int limit) {
-        return Result.ok(postService.getRankingPosts(period, limit));
+        Long userId = getCurrentUserIdOrNull();
+        return Result.ok(postService.getRankingPosts(period, limit, userId));
     }
 
     @Operation(summary = "相似帖子推荐")

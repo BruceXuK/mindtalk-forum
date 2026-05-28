@@ -33,4 +33,7 @@ public class CreatePostDTO {
 
     /** @提及的用户 ID 列表 */
     private List<Long> mentionedUserIds;
+
+    /** 所属系列 ID（可选） */
+    private Long seriesId;
 }

@@ -228,7 +228,12 @@
 
       <!-- Related Posts -->
       <section v-if="relatedPosts.length > 0" class="related-section">
-        <h3 class="section-title">相关推荐</h3>
+        <div class="section-header">
+          <h3 class="section-title">相关推荐</h3>
+          <button class="refresh-btn" title="换一换" @click="shuffleRelated">
+            <el-icon><Refresh /></el-icon>
+          </button>
+        </div>
         <div class="related-grid">
           <router-link
             v-for="rp in relatedPosts"
@@ -321,12 +326,12 @@
         </div>
 
         <!-- Comment CTA (not logged in) -->
-        <div v-else class="comment-login-cta" @click="goLogin">
+        <div v-else class="comment-login-cta" @click="promptLogin">
           <el-avatar :size="36" :icon="User" class="comment-login-cta__avatar" />
           <div class="comment-login-cta__input">
             <span>写下你的想法...</span>
           </div>
-          <el-button type="primary" size="small" round>登录</el-button>
+          <el-button type="primary" size="small" round @click.stop="goLogin">登录</el-button>
         </div>
 
         <!-- Comment List (Virtual Scroll) -->
@@ -420,7 +425,7 @@ import type { UserVO } from '@/types'
 import {
   View, ChatDotRound, Star, StarFilled, EditPen, Delete,
   Top, Folder, FolderChecked, FolderAdd, Close,
-  User, Collection, ArrowLeft, ArrowRight, Share, Reading, WarningFilled,
+  User, Collection, ArrowLeft, ArrowRight, Share, Reading, WarningFilled, Refresh,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -430,6 +435,7 @@ const contentRef = ref<HTMLElement>()
 
 const post = ref<PostVO | null>(null)
 const comments = ref<CommentVO[]>([])
+const allSimilarPosts = ref<PostVO[]>([])
 const relatedPosts = ref<PostVO[]>([])
 const seriesContext = ref<PostSeriesContextVO | null>(null)
 const loading = ref(false)
@@ -619,9 +625,10 @@ async function loadPost() {
   try {
     const res = await postApi.getDetail(postId.value)
     post.value = res.data
-    // Load similar posts
-    postApi.getSimilar(postId.value, 5).then(r => {
-      relatedPosts.value = r.data || []
+    // Load similar posts (fetch 10, shuffle, pick 2)
+    postApi.getSimilar(postId.value, 10).then(r => {
+      allSimilarPosts.value = r.data || []
+      shuffleRelated()
     }).catch(() => {})
     // Load series context
     seriesApi.getPostSeriesContext(postId.value).then(r => {
@@ -636,6 +643,15 @@ async function loadPost() {
   } finally {
     loading.value = false
   }
+}
+
+function shuffleRelated() {
+  const pool = [...allSimilarPosts.value]
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  relatedPosts.value = pool.slice(0, 2)
 }
 
 async function loadComments() {
@@ -717,6 +733,10 @@ async function handleLike() {
   } catch { /* handled */ }
 }
 
+function promptLogin() {
+  ElMessage.info('请先登录后再评论')
+}
+
 function goLogin() {
   router.push(`/login?redirect=/posts/${postId.value}`)
 }
@@ -771,7 +791,7 @@ async function submitComment() {
 
 async function handleSubmitReply(data: { parentId: number; replyToId: number; content: string; callback: () => void }) {
   if (!isLoggedIn.value) {
-    goLogin()
+    ElMessage.info('请先登录后再评论')
     return
   }
   try {
@@ -1233,11 +1253,43 @@ onUnmounted(() => {
   margin-bottom: var(--spacing-lg);
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
 .section-title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 0;
+}
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-primary);
+  }
+
+  &:active {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
+  }
 }
 
 .comment-count {

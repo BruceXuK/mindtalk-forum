@@ -51,7 +51,7 @@ public interface PostService {
     List<PostVO> getRecommendedPosts(Long userId, int limit);
 
     /** 排行榜（本周/本月） */
-    List<PostVO> getRankingPosts(String period, int limit);
+    List<PostVO> getRankingPosts(String period, int limit, Long currentUserId);
 
     /** 相似帖子推荐（基于标签重叠度） */
     List<PostVO> getSimilarPosts(Long postId, int limit);

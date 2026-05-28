@@ -66,6 +66,7 @@ public class CommentEventConsumer implements RocketMQListener<String> {
                     ? fromUsername + " 回复了你的评论"
                     : fromUsername + " 评论了你的帖子「" + (postTitle != null ? postTitle : "") + "」";
 
+            Long postId = comment != null ? comment.getPostId() : null;
             Notification notification = Notification.builder()
                     .userId(toUserId)
                     .fromUserId(fromUserId)
@@ -73,7 +74,7 @@ public class CommentEventConsumer implements RocketMQListener<String> {
                     .title(title)
                     .content(content)
                     .targetType("COMMENT")
-                    .targetId(commentId)
+                    .targetId(postId)
                     .isRead(false)
                     .build();
 

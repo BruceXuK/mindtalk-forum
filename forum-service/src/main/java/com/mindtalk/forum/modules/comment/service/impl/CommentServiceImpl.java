@@ -105,7 +105,7 @@ public class CommentServiceImpl implements CommentService {
         // 发送通知（异步）
         sendCommentNotification(userId, post, comment);
         // 发送@提及通知
-        sendMentionNotification(userId, comment.getId(), dto.getMentionedUserIds(), post.getTitle());
+        sendMentionNotification(userId, comment.getId(), dto.getMentionedUserIds(), post.getId(), post.getTitle());
 
         log.info("[评论] commentId={} postId={} userId={} parentId={}",
                 comment.getId(), dto.getPostId(), userId, dto.getParentId());
@@ -297,7 +297,7 @@ public class CommentServiceImpl implements CommentService {
                 notificationService.create(Notification.builder()
                         .userId(comment.getUserId()).fromUserId(userId)
                         .notifyType(Constants.NOTIFY_LIKE).title("新的点赞")
-                        .content(fromName + " 赞了你的评论").targetType("COMMENT").targetId(commentId)
+                        .content(fromName + " 赞了你的评论").targetType("COMMENT").targetId(comment.getPostId())
                         .isRead(false).build());
             }
 
@@ -382,12 +382,12 @@ public class CommentServiceImpl implements CommentService {
         if (toUserId != null) {
             notificationService.create(Notification.builder()
                     .userId(toUserId).fromUserId(userId).notifyType(Constants.NOTIFY_COMMENT)
-                    .title(title).content(content).targetType("COMMENT").targetId(comment.getId())
+                    .title(title).content(content).targetType("COMMENT").targetId(post.getId())
                     .isRead(false).build());
         }
     }
 
-    private void sendMentionNotification(Long fromUserId, Long commentId, List<Long> mentionedUserIds, String postTitle) {
+    private void sendMentionNotification(Long fromUserId, Long commentId, List<Long> mentionedUserIds, Long postId, String postTitle) {
         if (mentionedUserIds == null || mentionedUserIds.isEmpty()) return;
         User fromUser = userMapper.selectById(fromUserId);
         String fromName = fromUser != null ? fromUser.getNickname() : "用户";
@@ -399,7 +399,7 @@ public class CommentServiceImpl implements CommentService {
                     .userId(mentionedId).fromUserId(fromUserId)
                     .notifyType(Constants.NOTIFY_MENTION).title("有人@了你")
                     .content(fromName + " 在评论中提到了你（帖子「" + title + "」）")
-                    .targetType("COMMENT").targetId(commentId)
+                    .targetType("COMMENT").targetId(postId)
                     .isRead(false).build());
         }
     }
