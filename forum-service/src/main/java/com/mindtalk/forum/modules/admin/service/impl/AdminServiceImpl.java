@@ -67,6 +67,7 @@ public class AdminServiceImpl implements AdminService {
     private final AdminLogMapper adminLogMapper;
     private final PasswordEncoder passwordEncoder;
     private final DictService dictService;
+    private final com.mindtalk.forum.modules.message.service.NotificationService notificationService;
 
     // ════════════════════════ 用户管理 ════════════════════════
 
@@ -354,6 +355,21 @@ public class AdminServiceImpl implements AdminService {
         report.setHandleResult(dto.getHandleResult());
         report.setHandleTime(LocalDateTime.now());
         reportMapper.updateById(report);
+
+        // 通知举报者
+        String statusLabel = dto.getStatus() == 2 ? "已处理" : "已驳回";
+        String notifyContent = "你提交的举报（" + report.getReason() + "）已被管理员" + statusLabel
+                + (dto.getHandleResult() != null && !dto.getHandleResult().isBlank()
+                        ? "：" + dto.getHandleResult() : "。");
+        notificationService.create(com.mindtalk.forum.modules.message.entity.Notification.builder()
+                .userId(report.getReporterId())
+                .notifyType(Constants.NOTIFY_SYSTEM)
+                .title("举报处理结果")
+                .content(notifyContent)
+                .targetType("REPORT")
+                .targetId(reportId)
+                .isRead(false)
+                .build());
 
         log.info("[举报处理] 管理员{}处理举报{}: status={}", adminId, reportId, dto.getStatus());
     }

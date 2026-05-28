@@ -102,7 +102,8 @@ function handleDialog(report: ReportVO) {
 async function submitHandle(status: number) {
   if (!currentReport.value) return
   try {
-    await adminApi.handleReport(currentReport.value.id, { status, handleResult: handleResult.value })
+    const result = handleResult.value.trim() || (status === 2 ? '已处理' : '已驳回')
+    await adminApi.handleReport(currentReport.value.id, { status, handleResult: result })
     ElMessage.success('已处理')
     dialogVisible.value = false
     loadReports()
