@@ -27,7 +27,7 @@ Thumbs.db
 *.swo
 
 # Log
-logs/
+/logs/
 *.log
 
 # Deploy
