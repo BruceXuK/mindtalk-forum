@@ -517,7 +517,7 @@ CREATE TABLE admin_logs (
     action          VARCHAR(50)     NOT NULL,                  -- 操作类型
     target_type     VARCHAR(30),                               -- 目标类型：USER / POST / COMMENT / CATEGORY / TAG
     target_id       BIGINT,                                    -- 目标 ID
-    detail          JSONB,                                     -- 操作详情（变更前后对比）
+    detail          TEXT,                                      -- 操作详情（变更前后对比）
     ip              VARCHAR(45),                               -- 操作 IP
     create_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
     update_time     TIMESTAMP       NOT NULL DEFAULT NOW(),
@@ -529,7 +529,7 @@ COMMENT ON COLUMN admin_logs.admin_id     IS '操作管理员 ID';
 COMMENT ON COLUMN admin_logs.action       IS '操作类型：BAN_USER / DELETE_POST / PIN_POST / FEATURE_POST / MANAGE_CATEGORY 等';
 COMMENT ON COLUMN admin_logs.target_type  IS '目标类型：USER / POST / COMMENT / CATEGORY / TAG';
 COMMENT ON COLUMN admin_logs.target_id    IS '目标 ID';
-COMMENT ON COLUMN admin_logs.detail       IS '操作详情（JSONB，记录变更前后对比）';
+COMMENT ON COLUMN admin_logs.detail       IS '操作详情（TEXT，记录变更前后对比）';
 COMMENT ON COLUMN admin_logs.ip           IS '操作 IP';
 COMMENT ON COLUMN admin_logs.deleted      IS '逻辑删除：0-正常 1-已删除';
 
