@@ -2,10 +2,20 @@
   <div class="admin-categories">
     <div class="page-header">
       <h2 class="page-title">分类管理</h2>
-      <el-button type="primary" size="small" @click="openDialog()">新增分类</el-button>
+      <div class="page-header__actions">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索分类名..."
+          clearable
+          size="small"
+          style="width: 200px"
+          :prefix-icon="Search"
+        />
+        <el-button type="primary" size="small" @click="openDialog()">新增分类</el-button>
+      </div>
     </div>
 
-    <el-table :data="categories" v-loading="loading" stripe row-key="id">
+    <el-table :data="filteredCategories" v-loading="loading" stripe row-key="id">
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="name" label="名称" width="150" />
       <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
@@ -55,13 +65,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { Search } from '@element-plus/icons-vue'
 import { adminApi } from '@/api/modules/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { CategoryVO } from '@/types'
 
 const categories = ref<CategoryVO[]>([])
 const loading = ref(false)
+const searchQuery = ref('')
+
+const filteredCategories = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return categories.value
+  return categories.value.filter(c => c.name.toLowerCase().includes(q))
+})
 const saving = ref(false)
 const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
@@ -148,6 +166,9 @@ async function handleDelete(row: CategoryVO) {
 .page-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: var(--spacing-lg);
+}
+.page-header__actions {
+  display: flex; align-items: center; gap: var(--spacing-sm);
 }
 .page-title {
   font-size: var(--font-size-xl); font-weight: var(--font-weight-bold);

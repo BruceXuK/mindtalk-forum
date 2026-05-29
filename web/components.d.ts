@@ -12,6 +12,7 @@ declare module 'vue' {
     AppRightSidebar: typeof import('./src/components/layout/AppRightSidebar.vue')['default']
     AppSidebar: typeof import('./src/components/layout/AppSidebar.vue')['default']
     CommentItem: typeof import('./src/components/comment/CommentItem.vue')['default']
+    ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBacktop: typeof import('element-plus/es')['ElBacktop']
     ElBadge: typeof import('element-plus/es')['ElBadge']
@@ -54,6 +55,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SkeletonCard: typeof import('./src/components/common/SkeletonCard.vue')['default']
+    TagSelector: typeof import('./src/components/common/TagSelector.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

@@ -2,6 +2,7 @@ package com.mindtalk.forum.modules.admin.controller;
 
 import com.mindtalk.common.model.Result;
 import com.mindtalk.forum.modules.post.dto.CreateTagDTO;
+import com.mindtalk.forum.modules.post.dto.MergeTagDTO;
 import com.mindtalk.forum.modules.post.service.TagService;
 import com.mindtalk.forum.modules.post.vo.TagVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,6 +54,13 @@ public class AdminTagController {
     @PutMapping("/{id}/status")
     public Result<Void> toggleStatus(@PathVariable Long id) {
         tagService.toggleStatus(id);
+        return Result.ok();
+    }
+
+    @Operation(summary = "合并标签")
+    @PostMapping("/merge")
+    public Result<Void> merge(@Valid @RequestBody MergeTagDTO dto) {
+        tagService.merge(dto.getSourceIds(), dto.getTargetId());
         return Result.ok();
     }
 }

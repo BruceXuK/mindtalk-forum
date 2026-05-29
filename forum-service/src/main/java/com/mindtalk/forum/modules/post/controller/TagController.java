@@ -24,17 +24,20 @@ public class TagController {
 
     private final TagService tagService;
 
-    @Operation(summary = "标签列表")
+    @Operation(summary = "标签列表（可选搜索）")
     @GetMapping
-    public Result<List<TagVO>> list() {
+    public Result<List<TagVO>> list(@RequestParam(required = false) String q) {
+        if (q != null && !q.isBlank()) {
+            return Result.ok(tagService.search(q.trim()));
+        }
         return Result.ok(tagService.list());
     }
 
-    @Operation(summary = "新增标签")
+    @Operation(summary = "新增标签（登录用户可创建，重名返回已有）")
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<TagVO> create(@Valid @RequestBody CreateTagDTO dto) {
-        return Result.ok(tagService.create(dto));
+        return Result.ok(tagService.getOrCreate(dto.getName(), dto.getDescription()));
     }
 
     @Operation(summary = "编辑标签")

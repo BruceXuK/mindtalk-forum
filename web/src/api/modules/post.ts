@@ -72,6 +72,14 @@ export const postApi = {
     return request.get<any, Result<TagVO[]>>('/tags')
   },
 
+  searchTags(q: string) {
+    return request.get<any, Result<TagVO[]>>('/tags', { params: { q } })
+  },
+
+  createTag(data: { name: string; description?: string }) {
+    return request.post<any, Result<TagVO>>('/tags', data)
+  },
+
   getMyDrafts(params?: { page?: number; size?: number }) {
     return request.get<any, Result<PageResult<PostVO>>>('/posts/me/drafts', { params })
   },

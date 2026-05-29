@@ -85,19 +85,15 @@
             <el-icon><PriceTag /></el-icon>
             标签
           </label>
-          <div v-if="tagLoading" class="meta-row__skeleton">
-            <span class="skeleton-chip" v-for="i in 5" :key="i"></span>
-          </div>
-          <div v-else class="chip-group">
-            <button
-              v-for="tag in tags"
-              :key="tag.id"
-              class="chip chip--tag"
-              :class="{ 'is-active': form.tagIds.includes(tag.id) }"
-              @click="toggleTag(tag.id)"
+          <div class="chip-group">
+            <span v-if="extractedTagNames.length === 0" class="meta-row__hint">在正文中用 #标签名 自动识别</span>
+            <span
+              v-for="name in extractedTagNames"
+              :key="name"
+              class="chip chip--tag-detected"
             >
-              {{ tag.name }}
-            </button>
+              {{ name }}
+            </span>
           </div>
         </div>
 
@@ -283,7 +279,7 @@ import { renderMarkdown, renderMermaidDiagrams } from '@/composables/useMarkdown
 import { useMention, parseMentionedUsernames } from '@/composables/useMention'
 import { useMarkdownToolbar } from '@/composables/useMarkdownToolbar'
 import type { ToolbarActions } from '@/composables/useMarkdownToolbar'
-import type { CategoryVO, TagVO, UserVO, SeriesVO } from '@/types'
+import type { CategoryVO, UserVO, SeriesVO } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -357,17 +353,14 @@ function onSelectMention(user: UserVO) {
 const isPreview = ref(false)
 const submitting = ref(false)
 const categories = ref<CategoryVO[]>([])
-const tags = ref<TagVO[]>([])
 const userSeries = ref<SeriesVO[]>([])
 const categoryLoading = ref(true)
-const tagLoading = ref(true)
 const seriesLoading = ref(true)
 
 const form = reactive({
   title: '',
   contentText: '',
   categoryId: null as number | null,
-  tagIds: [] as number[],
   seriesId: null as number | null
 })
 
@@ -377,6 +370,46 @@ const canPublish = computed(() =>
 const canSaveDraft = computed(() =>
   form.title.trim().length > 0 || form.contentText.trim().length > 0
 )
+
+// ── #标签名 提取 ──
+function extractTagNames(text: string): string[] {
+  if (!text) return []
+  // Remove fenced code blocks
+  let cleaned = text.replace(/```[\s\S]*?```/g, '')
+  // Remove inline code
+  cleaned = cleaned.replace(/`[^`]+`/g, '')
+  // Match #tag — #tag (no space) is tag, # Heading (with space) is Markdown heading
+  const matches = cleaned.match(/(?<!#)#([\w一-龥][\w一-龥-]*)/g)
+  if (!matches) return []
+  // Deduplicate (case-insensitive)
+  const seen = new Set<string>()
+  return matches
+    .map(m => m.slice(1))
+    .filter(name => {
+      const lower = name.toLowerCase()
+      if (seen.has(lower)) return false
+      seen.add(lower)
+      return true
+    })
+    .slice(0, 5)
+}
+
+const extractedTagNames = computed(() => extractTagNames(form.contentText))
+
+// Resolve tag names to IDs (create new ones as needed)
+async function resolveTagIds(names: string[]): Promise<number[]> {
+  if (names.length === 0) return []
+  const ids: number[] = []
+  for (const name of names) {
+    try {
+      const res = await postApi.createTag({ name })
+      ids.push(res.data.id)
+    } catch {
+      // silently skip failed tag creation
+    }
+  }
+  return ids
+}
 
 // ── Draft auto-save ──
 const DRAFT_KEY = 'mindtalk_draft'
@@ -389,7 +422,6 @@ function saveDraft() {
     title: form.title,
     contentText: form.contentText,
     categoryId: form.categoryId,
-    tagIds: form.tagIds,
     seriesId: form.seriesId,
     timestamp: Date.now()
   }
@@ -412,7 +444,6 @@ function loadDraft() {
     if (draft.title) form.title = draft.title
     if (draft.contentText) form.contentText = draft.contentText
     if (draft.categoryId) form.categoryId = draft.categoryId
-    if (draft.tagIds) form.tagIds = draft.tagIds
     if (draft.seriesId !== undefined) form.seriesId = draft.seriesId
     draftLoaded = true
   } catch { /* ignore */ }
@@ -424,7 +455,7 @@ function clearDraft() {
 
 // Watch for changes to auto-save
 watch(
-  () => [form.title, form.contentText, form.categoryId, form.tagIds, form.seriesId],
+  () => [form.title, form.contentText, form.categoryId, form.seriesId],
   () => {
     if (!draftLoaded) return
     if (draftTimer) clearTimeout(draftTimer)
@@ -439,16 +470,6 @@ function onTitleInput() {
   if (!el) return
   el.style.height = 'auto'
   el.style.height = el.scrollHeight + 'px'
-}
-
-// ── Tags ──
-function toggleTag(tagId: number) {
-  const idx = form.tagIds.indexOf(tagId)
-  if (idx === -1) {
-    form.tagIds.push(tagId)
-  } else {
-    form.tagIds.splice(idx, 1)
-  }
 }
 
 // ── Image upload ──
@@ -583,12 +604,13 @@ async function handleSaveDraft() {
   if (!canSaveDraft.value || submitting.value || draftSaving.value) return
   draftSaving.value = true
   try {
+    const tagIds = await resolveTagIds(extractedTagNames.value)
     const data: any = {
       title: form.title.trim() || '无标题草稿',
       content: form.contentText,
       contentText: form.contentText,
       categoryId: form.categoryId || 1,
-      tagIds: form.tagIds,
+      tagIds,
       status: 0,
       mentionedUserIds: mentionedUserIds.value,
       seriesId: form.seriesId,
@@ -612,18 +634,18 @@ async function handleSubmit() {
   if (!canPublish.value || submitting.value) return
   submitting.value = true
   try {
+    const tagIds = await resolveTagIds(extractedTagNames.value)
     const data: any = {
       title: form.title.trim(),
       content: form.contentText,
       contentText: form.contentText,
       categoryId: form.categoryId!,
-      tagIds: form.tagIds,
+      tagIds,
       mentionedUserIds: mentionedUserIds.value,
       seriesId: form.seriesId,
     }
     if (isEdit.value) {
       await postApi.update(Number(route.params.id), { ...data, status: 1 })
-      // If it was a draft, also publish
       if (isDraft.value) {
         await postApi.publishDraft(Number(route.params.id))
         ElMessage.success('草稿已发布')
@@ -661,19 +683,14 @@ onMounted(async () => {
     if (form.title) onTitleInput()
   }
 
-  // Load categories and tags
+  // Load categories
   try {
-    const [catRes, tagRes] = await Promise.all([
-      postApi.getCategories(),
-      postApi.getTags()
-    ])
+    const catRes = await postApi.getCategories()
     categories.value = catRes.data
-    tags.value = tagRes.data
   } catch {
     /* handled */
   } finally {
     categoryLoading.value = false
-    tagLoading.value = false
   }
 
   // Load user series (for new posts only)
@@ -698,7 +715,15 @@ onMounted(async () => {
       form.title = res.data.title
       form.contentText = res.data.contentText || ''
       form.categoryId = res.data.category?.id || null
-      form.tagIds = res.data.tags.map(t => t.id)
+      // Convert existing tags to #tagname in content (backward compat)
+      if (res.data.tags?.length > 0) {
+        const existing = extractTagNames(form.contentText)
+        const missing = res.data.tags.filter((t: any) => !existing.some(e => e.toLowerCase() === t.name.toLowerCase()))
+        if (missing.length > 0) {
+          const tagLine = missing.map((t: any) => '#' + t.name).join(' ')
+          form.contentText = form.contentText ? form.contentText + '\n\n' + tagLine : tagLine
+        }
+      }
       isDraft.value = res.data.status === 0
       draftLoaded = true
       await nextTick()
@@ -976,6 +1001,15 @@ onUnmounted(() => {
     color: var(--color-primary);
     font-weight: var(--font-weight-medium);
   }
+}
+
+.chip--tag-detected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: var(--font-weight-medium);
+  cursor: default;
+  pointer-events: none;
 }
 
 // ── Editor Area ──

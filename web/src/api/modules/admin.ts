@@ -157,6 +157,10 @@ export const adminApi = {
     return request.put<any, Result<void>>(`/admin/tags/${id}/status`)
   },
 
+  mergeTags(data: { sourceIds: number[]; targetId: number }) {
+    return request.post<any, Result<void>>('/admin/tags/merge', data)
+  },
+
   // 公告管理
   getAnnouncementList() {
     return request.get<any, Result<AnnouncementVO[]>>('/admin/announcements')
