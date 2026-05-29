@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 WEB_DIR="$PROJECT_DIR/web"
 SERVICE_DIR="$PROJECT_DIR/forum-service"
+GATEWAY_DIR="$PROJECT_DIR/gateway"
 ENV_FILE="$SCRIPT_DIR/.env"
 ENV_EXAMPLE="$SCRIPT_DIR/.env.example"
 
@@ -143,7 +144,7 @@ fi
 # 5. 构建后端
 # ═══════════════════════════════════════════════
 build_backend() {
-  log "构建后端..."
+  log "构建 forum-service..."
   cd "$SERVICE_DIR"
 
   if command -v mvn >/dev/null 2>&1; then
@@ -155,14 +156,20 @@ build_backend() {
   fi
 
   $MVN package -DskipTests -Dmaven.test.skip=true -q
-  log "后端构建完成 → $SERVICE_DIR/target"
+  log "forum-service 构建完成"
+
+  log "构建 gateway..."
+  cd "$GATEWAY_DIR"
+  $MVN package -DskipTests -Dmaven.test.skip=true -q
+  log "gateway 构建完成 → $GATEWAY_DIR/target"
   echo ""
 }
 
 if [ "$SKIP_BUILD" = false ] && [ "$SKIP_BACKEND" = false ]; then
-  if [ "$UPDATE" = true ] && [ -d "$SERVICE_DIR/target" ]; then
-    RECENT_JAVA_CHANGE=$(find "$SERVICE_DIR/src" -name "*.java" -newer "$SERVICE_DIR/target" 2>/dev/null | wc -l)
-    if [ "$RECENT_JAVA_CHANGE" -eq 0 ]; then
+  if [ "$UPDATE" = true ] && [ -d "$SERVICE_DIR/target" ] && [ -d "$GATEWAY_DIR/target" ]; then
+    FORUM_CHANGED=$(find "$SERVICE_DIR/src" -name "*.java" -newer "$SERVICE_DIR/target" 2>/dev/null | wc -l)
+    GATEWAY_CHANGED=$(find "$GATEWAY_DIR/src" -name "*.java" -newer "$GATEWAY_DIR/target" 2>/dev/null | wc -l)
+    if [ "$FORUM_CHANGED" -eq 0 ] && [ "$GATEWAY_CHANGED" -eq 0 ]; then
       log "后端无变更，跳过构建 (--skip-backend 可强制跳过)"
     else
       build_backend
