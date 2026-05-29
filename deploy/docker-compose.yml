@@ -57,11 +57,16 @@ services:
       - ES_URIS=http://elasticsearch:9200
       - ROCKETMQ_ADDR=rocketmq-namesrv:9876
       - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_PUBLIC_ENDPOINT=http://localhost:9000
+      - MINIO_PUBLIC_ENDPOINT=${MINIO_PUBLIC_ENDPOINT}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - NACOS_ADDR=nacos:8848
       - JWT_SECRET=${JWT_SECRET}
+      - RSS_SITE_URL=${RSS_SITE_URL}
+      - RSS_TITLE=${RSS_TITLE}
+      - RSS_DESCRIPTION=${RSS_DESCRIPTION}
+      - RSS_GENERATOR=${RSS_GENERATOR}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
     depends_on:
       postgres:
         condition: service_healthy

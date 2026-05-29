@@ -54,7 +54,7 @@ minio:
   presigned-expiry-seconds: 3600
 
 jwt:
-  secret: ${JWT_SECRET:mindtalk-forum-jwt-secret-key-2024}
+  secret: ${JWT_SECRET:}
   access-token-ttl: 1800000
   refresh-token-ttl: 604800000
 
@@ -65,10 +65,10 @@ knife4j:
 
 # ── RSS 配置 ──
 rss:
-  title: MindTalk 最新帖子
-  description: MindTalk 思享论坛最新帖子
-  generator: MindTalk Forum
-  site-url: https://mindtalk.example.com
+  title: ${RSS_TITLE:MindTalk 最新帖子}
+  description: ${RSS_DESCRIPTION:MindTalk 思享论坛最新帖子}
+  generator: ${RSS_GENERATOR:MindTalk Forum}
+  site-url: ${RSS_SITE_URL:http://localhost:5173}
   timezone: Asia/Shanghai
   default-limit: 20
   truncate-length: 200
@@ -92,7 +92,7 @@ rate-limit:
 
 # ── CORS ──
 cors:
-  allowed-origins: "*"
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   max-age: 3600
 
 # ── 功能开关 ──
