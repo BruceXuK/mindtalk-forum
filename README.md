@@ -27,39 +27,55 @@
 
 ```
 mindtalk-forum/
+├── common/               Java 公共库（共享 DTO/工具类）
+├── docs/                 项目文档
 ├── gateway/              API 网关（Spring Cloud Gateway + JWT 鉴权 + 路由转发）
-├── forum-service/        核心业务服务（用户/帖子/评论/通知/管理后台）
+├── forum-service/        核心业务服务
 │   └── src/main/
 │       ├── java/com/mindtalk/forum/
 │       │   ├── config/           安全/Web/CORS 配置
-│       │   ├── common/           工具类（Redis/JWT）
+│       │   ├── common/           工具类/注解/切面/异常/常量
 │       │   └── modules/
-│       │       ├── admin/        管理后台（用户/帖子/评论/举报/公告/日志/统计）
+│       │       ├── admin/        管理后台
+│       │       ├── announcement/ 公告
+│       │       ├── badge/        勋章
 │       │       ├── comment/      评论
+│       │       ├── dict/         字典（敏感词等）
+│       │       ├── file/         文件上传（MinIO）
 │       │       ├── message/      私信/通知
 │       │       ├── post/         帖子/分类/标签/RSS
-│       │       ├── report/       举报提交
-│       │       ├── search/       搜索
-│       │       ├── subscription/ 关注/收藏
+│       │       ├── reading/      阅读历史
+│       │       ├── readlater/    稍后阅读
+│       │       ├── report/       举报
+│       │       ├── search/       搜索（Elasticsearch）
+│       │       ├── series/       系列合集
+│       │       ├── subscription/ 关注/收藏/订阅
 │       │       └── user/         用户/认证
 │       └── resources/
 │           └── mapper/           MyBatis XML
 ├── web/                  Vue 3 前端
 │   └── src/
 │       ├── api/          API 请求模块
+│       ├── assets/       静态资源（样式/图片）
 │       ├── components/   通用组件
-│       ├── composables/  组合式函数（useMarkdown/useMention/useMarkdownToolbar）
+│       ├── composables/  组合式函数
 │       ├── layouts/      布局组件
 │       ├── router/       路由配置
 │       ├── stores/       Pinia 状态管理
 │       ├── types/        TypeScript 类型定义
+│       ├── utils/        工具函数
 │       └── views/        页面视图
-├── deploy/               Docker Compose 编排 + Nginx + SQL + 部署脚本
+├── deploy/               Docker Compose 编排 + 部署脚本
 │   ├── deploy.sh         一键部署脚本
 │   ├── docker-compose.yml
 │   ├── .env.example      环境变量模板
+│   ├── forum-service/    Dockerfile（后端镜像）
+│   ├── gateway/          Dockerfile（网关镜像）
+│   ├── elasticsearch/    Dockerfile + 插件配置
 │   ├── nginx/            Nginx 配置
 │   ├── postgres/         init.sql（DDL + 初始数据） + reset.sql
+│   ├── rocketmq/         RocketMQ 配置
+│   ├── minio/            MinIO 配置
 │   └── seed.sql          示例数据
 └── init.sql              根目录初始化 SQL（指向 deploy/postgres/init.sql）
 ```
@@ -124,7 +140,7 @@ cd web && npm install && npm run dev        # :5173 → proxy → :8080
 
 | 内容 | 说明 |
 |------|------|
-| 29 张业务表 | 用户、角色、权限、帖子、评论、标签、分类、点赞、收藏、关注、私信、通知、举报、公告、操作日志等 |
+| 32 张业务表 | 用户、角色、权限、帖子、评论、标签、分类、点赞、收藏、关注、私信、通知、举报、公告、操作日志、系列、勋章、字典、附件、阅读历史、稍后阅读、订阅等 |
 | 角色（3 条） | ADMIN / MODERATOR / USER |
 | 权限（27 条） | 管理后台菜单 + 操作按钮权限 |
 | 勋章（8 条） | 内容创作、社交互动类成就定义 |
@@ -175,11 +191,15 @@ openssl rand -base64 32   # 其他密码
 
 - **帖子** — Markdown 编辑器 + 工具栏 + 实时预览 + 图片拖拽上传 + `@` 提及 + `#标签名` 自动提取
 - **评论** — 二级回复 + 点赞
-- **用户** — 注册/登录 + 个人主页 + 关注 + 私信 + 通知
-- **内容组织** — 分类 + 标签（`#标签名` 自动创建） + 系列合集
-- **管理后台** — 用户管理 + 帖子/评论审核 + 举报处理 + 标签管理（合并/启禁） + 分类管理 + 公告 + 敏感词 + 操作日志 + 统计图表
-- **RSS** — 全站 / 分类 / 用户维度订阅
+- **用户** — 注册/登录 + 个人主页 + 关注 + 私信 + 通知 + 个人设置
+- **内容组织** — 分类 + 标签（`#标签名` 自动创建/合并/启禁） + 系列合集
+- **系列** — 帖子系列合集，支持系列内创建帖子
+- **稍后阅读** — 收藏帖子稍后阅读 + 阅读历史记录
+- **勋章** — 成就系统，自动/手动发放勋章
 - **搜索** — Elasticsearch 全文搜索
+- **RSS** — 全站 / 分类 / 用户维度订阅
+- **管理后台** — 用户/角色管理 + 帖子/评论审核 + 举报处理 + 标签管理 + 分类管理 + 公告 + 敏感词字典 + 操作日志 + 统计图表
+- **文件上传** — MinIO 对象存储 + 图片上传
 - **UI** — 暗色模式 + 响应式布局 + 骨架屏 + 空状态 + PWA 离线支持
 - **安全** — JWT 鉴权 + 接口限流 + 操作日志 + RBAC 权限
 - **缓存** — Redis 缓存 + 防雪崩/穿透/击穿策略
