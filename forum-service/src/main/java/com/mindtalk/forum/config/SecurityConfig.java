@@ -38,8 +38,6 @@ public class SecurityConfig {
                         "/swagger-resources/**", "/swagger-ui/**").permitAll()
                 // 认证接口放行
                 .requestMatchers("/auth/**").permitAll()
-                // Actuator 健康检查放行
-                .requestMatchers("/actuator/health").permitAll()
                 // 公开读取
                 .requestMatchers(HttpMethod.GET,
                         "/posts/**", "/comments/**", "/users/*/profile", "/categories/**", "/tags/**",
