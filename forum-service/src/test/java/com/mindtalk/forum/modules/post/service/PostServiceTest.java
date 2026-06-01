@@ -182,7 +182,7 @@ class PostServiceTest {
 
             Page<Post> page = new Page<>(1, 10);
             // Use the mockPage directly since we can't easily mock MyBatis-Plus Page internals
-            when(postMapper.selectPageWithAuthor(any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+            when(postMapper.selectPageWithAuthor(any(Page.class), any(), any(), any(), any(), any(), any(), any()))
                     .thenAnswer(inv -> {
                         Page<Post> p = inv.getArgument(0);
                         p.setRecords(List.of(testPost));
