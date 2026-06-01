@@ -8,7 +8,6 @@ import com.mindtalk.common.exception.BusinessException;
 import com.mindtalk.forum.common.component.RocketMQProducer;
 import com.mindtalk.forum.common.utils.RedisUtils;
 import com.mindtalk.forum.modules.post.dto.CreatePostDTO;
-import com.mindtalk.forum.modules.post.dto.PostQueryDTO;
 import com.mindtalk.forum.modules.post.dto.UpdatePostDTO;
 import com.mindtalk.forum.modules.post.entity.Category;
 import com.mindtalk.forum.modules.post.entity.Post;
@@ -21,7 +20,6 @@ import com.mindtalk.forum.modules.post.service.impl.PostServiceImpl;
 import com.mindtalk.forum.modules.user.entity.User;
 import com.mindtalk.forum.modules.user.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -169,39 +167,6 @@ class PostServiceTest {
             verify(postMapper).deleteById(1L);
         }
     }
-
-    // @Nested
-    // @DisplayName("分页查询")
-    // class PageQueryTests {
-    //
-    //     @Test
-    //     @DisplayName("分页返回正确结构")
-    //     void shouldReturnPageResult() {
-    //         PostQueryDTO query = new PostQueryDTO();
-    //         query.setPage(1);
-    //         query.setSize(10);
-    //
-    //         Page<Post> page = new Page<>(1, 10);
-    //         // Use the mockPage directly since we can't easily mock MyBatis-Plus Page internals
-    //         when(postMapper.selectPageWithAuthor(page, null, null, null, null, null, null, null))
-    //                 .thenAnswer(inv -> {
-    //                     Page<Post> p = inv.getArgument(0);
-    //                     p.setRecords(List.of(testPost));
-    //                     p.setTotal(1);
-    //                     return p;
-    //                 });
-    //         when(userMapper.selectById(1L)).thenReturn(testUser);
-    //         when(categoryMapper.selectById(1L)).thenReturn(
-    //                 Category.builder().id(1L).name("Tech").build());
-    //         when(tagMapper.selectByPostId(1L)).thenReturn(Collections.emptyList());
-    //
-    //         var result = postService.getPostPage(query, null);
-    //
-    //         assertThat(result).isNotNull();
-    //         assertThat(result.getTotal()).isEqualTo(1);
-    //         assertThat(result.getRecords()).hasSize(1);
-    //     }
-    // }
 
     @Nested
     @DisplayName("帖子详情")
