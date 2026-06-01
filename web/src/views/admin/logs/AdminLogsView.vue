@@ -1,8 +1,8 @@
 <template>
   <div class="admin-logs-view">
     <div class="page-header">
-      <h2>{{ $t('admin.logs.title') }}</h2>
-      <p class="subtitle">{{ $t('admin.logs.subtitle') }}</p>
+      <h2>操作日志</h2>
+      <p class="subtitle">查看系统操作记录</p>
     </div>
 
     <div class="filter-bar">
@@ -39,16 +39,15 @@
     <el-card class="logs-table-card">
       <el-table :data="logs" border :loading="loading">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="type" label="操作类型" width="120">
+        <el-table-column prop="action" label="操作类型" width="120">
           <template #default="scope">
-            <el-tag :type="getTagType(scope.row.type)">{{ scope.row.type }}</el-tag>
+            <el-tag :type="getTagType(scope.row.action)">{{ getActionLabel(scope.row.action) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="module" label="操作模块" width="120" />
-        <el-table-column prop="content" label="操作内容" />
-        <el-table-column prop="operatorName" label="操作者" width="120" />
-        <el-table-column prop="ipAddress" label="IP地址" width="150" />
-        <el-table-column prop="userAgent" label="浏览器" width="200" />
+        <el-table-column prop="targetType" label="操作模块" width="120" />
+        <el-table-column prop="detail" label="操作内容" />
+        <el-table-column prop="adminName" label="操作者" width="120" />
+        <el-table-column prop="ip" label="IP地址" width="150" />
         <el-table-column prop="createTime" label="操作时间" width="180" />
       </el-table>
 
@@ -66,11 +65,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import type { LogDTO } from '@/api/admin/types'
+import { ref, reactive, onMounted } from 'vue'
+import type { AdminLogVO } from '@/types'
+import { adminApi } from '@/api/modules/admin'
 
 const loading = ref(false)
-const logs = ref<LogDTO[]>([])
+const logs = ref<AdminLogVO[]>([])
 
 const filterForm = reactive({
   type: '',
@@ -84,7 +84,7 @@ const pagination = reactive({
   total: 0
 })
 
-const getTagType = (type: string) => {
+const getTagType = (action: string) => {
   const types: Record<string, string> = {
     CREATE: 'success',
     UPDATE: 'warning',
@@ -92,7 +92,18 @@ const getTagType = (type: string) => {
     LOGIN: 'primary',
     LOGOUT: 'info'
   }
-  return types[type] || 'default'
+  return types[action] || 'default'
+}
+
+const getActionLabel = (action: string) => {
+  const labels: Record<string, string> = {
+    CREATE: '创建',
+    UPDATE: '更新',
+    DELETE: '删除',
+    LOGIN: '登录',
+    LOGOUT: '登出'
+  }
+  return labels[action] || action
 }
 
 const handleSearch = () => {
@@ -121,43 +132,14 @@ const handleCurrentChange = (page: number) => {
 const fetchLogs = async () => {
   loading.value = true
   try {
-    // Mock data
-    logs.value = [
-      {
-        id: 1,
-        type: 'CREATE',
-        module: 'post',
-        content: '创建帖子：MindTalk 发布',
-        operatorId: 1,
-        operatorName: 'admin',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createTime: '2024-01-15 10:30:00'
-      },
-      {
-        id: 2,
-        type: 'UPDATE',
-        module: 'user',
-        content: '更新用户信息：修改邮箱',
-        operatorId: 1,
-        operatorName: 'admin',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createTime: '2024-01-15 10:25:00'
-      },
-      {
-        id: 3,
-        type: 'LOGIN',
-        module: 'auth',
-        content: '管理员登录系统',
-        operatorId: 1,
-        operatorName: 'admin',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createTime: '2024-01-15 10:00:00'
-      }
-    ]
-    pagination.total = 3
+    const response = await adminApi.getLogs({
+      page: pagination.page,
+      size: pagination.size
+    })
+    if (response.code === 0) {
+      logs.value = response.data.records
+      pagination.total = response.data.total
+    }
   } catch (error) {
     console.error('获取日志失败:', error)
   } finally {
@@ -165,7 +147,9 @@ const fetchLogs = async () => {
   }
 }
 
-fetchLogs()
+onMounted(() => {
+  fetchLogs()
+})
 </script>
 
 <style scoped>
